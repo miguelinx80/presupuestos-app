@@ -4,7 +4,7 @@ import {
   Building2, Search, Plus, ChevronRight, ArrowLeft, MapPin, User,
   Calendar, Ruler, TrendingUp, CheckCircle2, Clock, XCircle,
   Euro, Edit3, Trash2, Save, X, Plane, Car, Hotel,
-  Utensils, Bus, ExternalLink, ChevronDown, ChevronUp, Navigation
+  Utensils, Bus, ExternalLink, ChevronDown, ChevronUp, Navigation, FileText
 } from "lucide-react";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ const INITIAL_PROJECTS = [
     country: "Países Bajos",
     client: "Tommy Hilfiger",
     sqm: 520,
-    status: "Confirmado",
+    status: "Facturado",
     chosenOption: "A",
     year: 2024,
     startDate: "2024-06-03",
@@ -190,6 +190,85 @@ const INITIAL_PROJECTS = [
       { id: 4, desc: "Transporte local", url: "", date: "", time: "", provider: "", tarifa: "", optA: 35, optB: 35, optC: null, optD: null },
       { id: 5, desc: "Dietas", url: "", date: "", time: "", provider: "", tarifa: "", optA: 180, optB: 180, optC: null, optD: null },
       { id: 6, desc: "Días fuera", url: "", date: "", time: "", provider: "", tarifa: "", optA: 146, optB: 115, optC: null, optD: null },
+    ]
+  },
+  // ── 2025 ──────────────────────────────────────────────────────────────────
+  {
+    id: 6,
+    ref: "Loewe Fidenza",
+    brand: "Loewe",
+    city: "Fidenza",
+    country: "Italia",
+    client: "LVMH – Loewe",
+    sqm: 295,
+    status: "Confirmado",
+    chosenOption: "B",
+    year: 2025,
+    startDate: "2025-02-10",
+    duration: 5,
+    locations: [
+      { id: 1, name: "Loewe – Fidenza Village", mapsUrl: "https://maps.google.com/?q=Fidenza+Village+outlet", date: "2025-02-10", time: "10:00", notes: "" },
+    ],
+    options: { A: { subtotal: 720, total: 864 }, B: { subtotal: 850, total: 1020 } },
+    expenses: [
+      { id: 1, desc: "SVQ>MXP", url: "", date: "2025-02-10", time: "7:00 – 10:15", provider: "Ryanair", tarifa: "110/140", optA: 110, optB: 140, optC: null, optD: null },
+      { id: 2, desc: "MXP>SVQ", url: "", date: "2025-02-12", time: "17:30 – 20:30", provider: "Ryanair", tarifa: "105/132", optA: 105, optB: 132, optC: null, optD: null },
+      { id: 3, desc: "Alquiler coche MXP", url: "", date: "", time: "", provider: "Hertz", tarifa: "", optA: 130, optB: 130, optC: null, optD: null },
+      { id: 4, desc: "Hotel Fidenza", url: "", date: "", time: "", provider: "Hotel Astoria", tarifa: "85", optA: 85, optB: 170, optC: null, optD: null },
+      { id: 5, desc: "Dietas", url: "", date: "", time: "", provider: "", tarifa: "", optA: 120, optB: 148, optC: null, optD: null },
+      { id: 6, desc: "Gasolina+peajes", url: "", date: "", time: "", provider: "", tarifa: "", optA: 70, optB: 70, optC: null, optD: null },
+    ]
+  },
+  {
+    id: 7,
+    ref: "CK Maasmechelen",
+    brand: "CK",
+    city: "Maasmechelen",
+    country: "Bélgica",
+    client: "Calvin Klein",
+    sqm: 340,
+    status: "Pendiente",
+    chosenOption: null,
+    year: 2025,
+    startDate: "2025-04-22",
+    duration: 5,
+    locations: [
+      { id: 1, name: "CK – Maasmechelen Village", mapsUrl: "https://maps.google.com/?q=Maasmechelen+Village+outlet", date: "2025-04-22", time: "11:00", notes: "Primera visita de medición" },
+    ],
+    options: { A: { subtotal: 810, total: 972 }, B: { subtotal: 890, total: 1068 } },
+    expenses: [
+      { id: 1, desc: "SVQ>BCN>BRU", url: "", date: "2025-04-22", time: "6:45 – 11:30", provider: "Vueling", tarifa: "165/195", optA: 165, optB: 195, optC: null, optD: null },
+      { id: 2, desc: "BRU>BCN>SVQ", url: "", date: "2025-04-24", time: "14:00 – 19:45", provider: "Vueling", tarifa: "155/182", optA: 155, optB: 182, optC: null, optD: null },
+      { id: 3, desc: "Alquiler coche BRU", url: "", date: "", time: "", provider: "Avis", tarifa: "", optA: 140, optB: 140, optC: null, optD: null },
+      { id: 4, desc: "Hotel Maasmechelen", url: "", date: "", time: "", provider: "Ibis", tarifa: "95", optA: 95, optB: 95, optC: null, optD: null },
+      { id: 5, desc: "Gasolina+peajes", url: "", date: "", time: "", provider: "", tarifa: "", optA: 65, optB: 65, optC: null, optD: null },
+      { id: 6, desc: "Dietas", url: "", date: "", time: "", provider: "", tarifa: "", optA: 130, optB: 130, optC: null, optD: null },
+    ]
+  },
+  {
+    id: 8,
+    ref: "TH La Vallée",
+    brand: "TH",
+    city: "Serris",
+    country: "Francia",
+    client: "Tommy Hilfiger",
+    sqm: 410,
+    status: "Pendiente",
+    chosenOption: null,
+    year: 2025,
+    startDate: "2025-05-15",
+    duration: 6,
+    locations: [
+      { id: 1, name: "TH – La Vallée Village (Disneyland Paris)", mapsUrl: "https://maps.google.com/?q=La+Vallee+Village+outlet+Paris", date: "2025-05-15", time: "10:30", notes: "" },
+    ],
+    options: { A: { subtotal: 920, total: 1104 }, B: { subtotal: 1050, total: 1260 } },
+    expenses: [
+      { id: 1, desc: "SVQ>CDG", url: "", date: "2025-05-15", time: "8:00 – 11:00", provider: "Air France", tarifa: "175/210", optA: 175, optB: 210, optC: null, optD: null },
+      { id: 2, desc: "CDG>SVQ", url: "", date: "2025-05-17", time: "16:00 – 19:00", provider: "Air France", tarifa: "168/200", optA: 168, optB: 200, optC: null, optD: null },
+      { id: 3, desc: "Hotel Serris", url: "", date: "", time: "", provider: "Marriott", tarifa: "180", optA: 180, optB: 240, optC: null, optD: null },
+      { id: 4, desc: "Transporte CDG–hotel", url: "", date: "", time: "", provider: "RER B + navette", tarifa: "", optA: 40, optB: 40, optC: null, optD: null },
+      { id: 5, desc: "Dietas", url: "", date: "", time: "", provider: "", tarifa: "", optA: 180, optB: 200, optC: null, optD: null },
+      { id: 6, desc: "Días fuera", url: "", date: "", time: "", provider: "", tarifa: "", optA: 80, optB: 80, optC: null, optD: null },
     ]
   },
 ];
@@ -595,7 +674,7 @@ function ResumeView({ projects, onSelect, onNewProject }) {
                     )}
                     {p.startDate && (
                       <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                        <Calendar size={10} />{fmtDate(p.startDate)}
+                        <Calendar size={10} />{fmtDate(p.startDate)}{p.duration ? ` · ${p.duration}h` : ""}
                       </span>
                     )}
                     {p.locations?.length > 0 && (
@@ -724,7 +803,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
             ["País",      "country",   <MapPin size={13} />],
             ["Ciudad",    "city",      <MapPin size={13} />],
             ["Superficie","sqm",       <Ruler size={13} />, " m²"],
-            ["Duración",  "duration",  <Clock size={13} />, " sem."],
+            ["Duración",  "duration",  <Clock size={13} />, " h"],
           ].map(([label, key, icon, suffix]) => (
             <div key={key}>
               <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>{icon} {label}</div>
@@ -745,6 +824,17 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
               : <div className="text-sm font-semibold" style={{ color: C.textDark }}>{fmtDate(project.startDate)}</div>}
           </div>
 
+          {/* Year — editable so it affects chart grouping */}
+          <div>
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>
+              <Calendar size={13} /> Año
+            </div>
+            {editing
+              ? <input type="number" value={draft.year || ""} onChange={e => setD("year", Number(e.target.value))}
+                  className={inputCl} style={inputSt} />
+              : <div className="text-sm font-semibold" style={{ color: C.textDark }}>{project.year}</div>}
+          </div>
+
           {/* Status */}
           <div>
             <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>
@@ -755,6 +845,21 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
                   {Object.keys(STATUS_CONFIG).map(s => <option key={s}>{s}</option>)}
                 </select>
               : <StatusBadge status={project.status} />}
+          </div>
+
+          {/* Notes — full width */}
+          <div className="col-span-2 sm:col-span-3">
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>
+              <FileText size={13} /> Notas
+            </div>
+            {editing
+              ? <textarea value={draft.notes || ""} onChange={e => setD("notes", e.target.value)}
+                  rows={3} placeholder="Observaciones, condiciones especiales, contactos..."
+                  className="w-full rounded-lg px-2 py-1.5 text-sm outline-none resize-none"
+                  style={inputSt} />
+              : project.notes
+                ? <div className="text-sm whitespace-pre-wrap" style={{ color: C.textDark }}>{project.notes}</div>
+                : <div className="text-sm" style={{ color: C.textLight }}>—</div>}
           </div>
         </div>
 
@@ -848,7 +953,6 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
                       <th key={o} className="text-right pb-2 font-bold text-xs px-1 whitespace-nowrap"
                         style={{ color: OPTION_COLORS[o].badge }}>
                         Op. {o}
-                        {o === "B" && <span className="font-normal ml-1 text-xs" style={{ color: C.textLight }}>(real)</span>}
                       </th>
                     ))}
                   </tr>
@@ -896,6 +1000,7 @@ function NewProjectView({ onBack, onCreate }) {
     ref: "", brand: "", city: "", country: "España", client: "",
     sqm: "", status: "Pendiente", chosenOption: null,
     year: new Date().getFullYear(), startDate: "", duration: "",
+    notes: "",
     locations: [],
     options: { A: { subtotal: 0, total: 0 } },
     expenses: []
@@ -942,7 +1047,7 @@ function NewProjectView({ onBack, onCreate }) {
             </div>
             {[["Marca","brand","CKO, TH..."],["Cliente","client","Tommy Hilfiger..."],
               ["Ciudad","city","París"],["País","country","Francia"],
-              ["Superficie (m²)","sqm","350"],["Duración (sem.)","duration","5"]].map(([label, key, ph]) => (
+              ["Superficie (m²)","sqm","350"],["Duración (h)","duration","8"]].map(([label, key, ph]) => (
               <div key={key}>
                 <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>{label}</label>
                 <input value={form[key] || ""} onChange={e => setF(key, e.target.value)} placeholder={ph} style={inputSt} className={inputCl} />
@@ -961,6 +1066,13 @@ function NewProjectView({ onBack, onCreate }) {
               <select value={form.status} onChange={e => setF("status", e.target.value)} style={inputSt} className={inputCl}>
                 {Object.keys(STATUS_CONFIG).map(s => <option key={s}>{s}</option>)}
               </select>
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Notas</label>
+              <textarea value={form.notes || ""} onChange={e => setF("notes", e.target.value)}
+                rows={3} placeholder="Observaciones, condiciones especiales, contactos..."
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
+                style={inputSt} />
             </div>
           </div>
         </div>
@@ -1044,7 +1156,7 @@ function NewProjectView({ onBack, onCreate }) {
                   <thead>
                     <tr>
                       <th className="w-7" />
-                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...visibleExpOpts.map(o => o === "B" ? "Op. B (real)" : `Op. ${o}`)].map(h => (
+                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...visibleExpOpts.map(o => `Op. ${o}`)].map(h => (
                         <th key={h} className="text-left pb-2 font-medium text-xs pr-2" style={{ color: C.textLight }}>{h}</th>
                       ))}
                     </tr>
@@ -1073,7 +1185,7 @@ function NewProjectView({ onBack, onCreate }) {
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [projects, setProjects] = useLocalStorage("presupuestos_v3", INITIAL_PROJECTS);
+  const [projects, setProjects] = useLocalStorage("presupuestos_v4", INITIAL_PROJECTS);
   const [view, setView]         = useState("list");
   const [selectedId, setSelectedId] = useState(null);
 
