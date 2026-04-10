@@ -292,6 +292,26 @@ function useLocalStorage(key, initial) {
   return [val, set];
 }
 
+// ─── MY INFO ─────────────────────────────────────────────────────────────────
+const MY_INFO = {
+  name:     "Miguel Jiménez Fernández",
+  vat:      "VAT: ES77804626L",
+  phone:    "(+34) 687 650 005",
+  websites: ["www.migueljimenez.com", "www.espaciosdeluz.com"],
+};
+
+const DOC_TYPES = ["Plano", "Foto", "Shoot list", "Contrato", "Presupuesto", "Referencia", "Otro"];
+const DOC_ICONS = { "Plano":"📐","Foto":"🖼️","Shoot list":"📋","Contrato":"📝","Presupuesto":"💼","Referencia":"🔗","Otro":"📄" };
+
+// Quote number: DDMMYY_1
+function defaultQuoteRef() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yy = String(d.getFullYear()).slice(2);
+  return `${dd}${mm}${yy}_1`;
+}
+
 // ─── STATUS BADGE ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.Pendiente;
@@ -532,6 +552,332 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
   );
 }
 
+// ─── DOCUMENTS SECTION ────────────────────────────────────────────────────────
+function DocumentsSection({ documents = [], editing, onChange }) {
+  const addDoc = () => onChange([...documents, { id: Date.now(), name: "", type: "Otro", url: "", date: "" }]);
+  const upd    = (id, f, v) => onChange(documents.map(d => d.id === id ? { ...d, [f]: v } : d));
+  const del    = (id) => onChange(documents.filter(d => d.id !== id));
+  const ist = { background: "#f8fafc", border: `1px solid ${C.border}`, color: C.textDark };
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: C.textDark }}>
+          📁 Documentos Drive
+        </h3>
+        {editing && (
+          <button type="button" onClick={addDoc}
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg"
+            style={{ background: C.navy+"12", color: C.navy }}>
+            <Plus size={12}/> Añadir documento
+          </button>
+        )}
+      </div>
+      {documents.length === 0 && !editing && (
+        <p className="text-xs" style={{ color: C.textLight }}>Sin documentos adjuntos.</p>
+      )}
+      {documents.length === 0 && editing && (
+        <p className="text-xs" style={{ color: C.textLight }}>Añade enlaces de Google Drive: planos, fotos, shoot lists...</p>
+      )}
+      <div className="space-y-2">
+        {documents.map(doc => editing ? (
+          <div key={doc.id} className="rounded-lg p-3 space-y-2"
+            style={{ background: "#f8fafc", border: `1px solid ${C.border}` }}>
+            <div className="flex gap-2">
+              <select value={doc.type} onChange={e => upd(doc.id,"type",e.target.value)}
+                className="rounded px-2 py-1.5 text-sm outline-none"
+                style={{ ...ist, width: 120, flexShrink: 0 }}>
+                {DOC_TYPES.map(t => <option key={t}>{t}</option>)}
+              </select>
+              <input value={doc.name} onChange={e => upd(doc.id,"name",e.target.value)}
+                placeholder="Nombre del documento"
+                className="flex-1 rounded px-2 py-1.5 text-sm outline-none" style={ist}/>
+              <button type="button" onClick={() => del(doc.id)} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                <X size={15}/>
+              </button>
+            </div>
+            <input value={doc.url} onChange={e => upd(doc.id,"url",e.target.value)}
+              placeholder="https://drive.google.com/..."
+              className="w-full rounded px-2 py-1.5 text-sm outline-none" style={ist}/>
+          </div>
+        ) : (
+          <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:shadow-sm transition-shadow"
+            style={{ background: "#f8fafc", border: `1px solid ${C.border}`, textDecoration:"none" }}>
+            <span className="text-base flex-shrink-0">{DOC_ICONS[doc.type] || "📄"}</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate" style={{ color: "#2563eb" }}>{doc.name || "Sin título"}</div>
+              <div className="text-xs" style={{ color: C.textLight }}>{doc.type}</div>
+            </div>
+            <ExternalLink size={13} style={{ color: C.textLight, flexShrink: 0 }}/>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── QUOTE HTML GENERATOR ─────────────────────────────────────────────────────
+function generateQuoteHTML({ quoteRef, quoteDate, website, lang, client, lines, pageNotes }) {
+  const isES = lang === "es";
+  const fmtN = (n) => n != null ? Number(n).toLocaleString("es-ES",{minimumFractionDigits:0,maximumFractionDigits:0})+" €" : "";
+  const fmtDate = (s) => { if(!s) return ""; const [y,m,d]=s.split("-"); return `${d}-${m}-${y}`; };
+  const total = lines.reduce((s,l) => s + (Number(l.subtotal)||0), 0);
+
+  const rows = lines.map(l => {
+    const hasBrk = l.unitPrice !== "" && l.unitPrice != null && l.qty !== "" && l.qty != null;
+    const sub = hasBrk
+      ? Number(l.unitPrice) * Number(l.qty) * (l.discount ? (1 - Number(l.discount)/100) : 1)
+      : Number(l.subtotal)||0;
+    return `<tr>
+      <td class="desc"><strong>${l.title||""}</strong>${l.detail ? `<br><span class="det">${l.detail.replace(/\n/g,"<br>")}</span>` : ""}</td>
+      <td class="num">${hasBrk ? fmtN(l.unitPrice) : ""}</td>
+      <td class="num">${hasBrk ? l.qty : ""}</td>
+      <td class="num">${l.discount ? `-${l.discount}%` : ""}</td>
+      <td class="num"><strong>${fmtN(sub)}</strong></td>
+    </tr>`;
+  }).join("");
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;font-size:12px;color:#000;padding:50px 60px}
+.ref{text-align:right;margin-bottom:28px}
+.ref h2{font-size:13px;font-weight:bold;margin-bottom:5px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:48px}
+.mine h2{font-size:13px;font-weight:bold;margin-bottom:3px}
+.mine p{font-size:12px;margin-top:8px}
+.mine a{color:#000}
+.cbox{border:1px solid #000;padding:14px 18px;min-width:230px;text-align:right}
+.clabel{font-size:8px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.cbox p{font-weight:bold;font-size:13px;margin-bottom:2px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+thead tr{border-bottom:2px solid #000}
+th{padding:7px 0;font-size:12px;font-weight:bold;text-align:right}
+th.desc{text-align:left}
+td{padding:13px 8px 13px 0;vertical-align:top;border-bottom:1px solid #e8e8e8;font-size:12px}
+td.desc{padding-right:20px;text-align:left}
+td.num{text-align:right;white-space:nowrap}
+.det{color:#444;font-size:11px;line-height:1.5}
+.tot{margin-top:18px;text-align:right;font-size:14px;font-weight:bold}
+.notes{page-break-before:always;padding-top:50px;font-size:12px;line-height:1.7}
+.pbtn{position:fixed;top:18px;right:18px;padding:9px 18px;background:#1a2a4a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:bold;box-shadow:0 2px 8px #0003}
+@media print{.pbtn{display:none}@page{margin:15mm 20mm}body{padding:0}}
+</style></head><body>
+<button class="pbtn" onclick="window.print()">🖨️ Guardar como PDF</button>
+<div class="ref">
+  <h2>${isES?"Presupuesto":"QUOTATION"} # ${quoteRef}</h2>
+  <h2>${isES?"Fecha":"Date"}: ${fmtDate(quoteDate)}</h2>
+</div>
+<div class="hdr">
+  <div class="mine">
+    <h2>Miguel Jiménez Fernández</h2>
+    <p style="font-weight:bold">VAT: ES77804626L</p>
+    <p style="margin-top:14px"><a href="https://${website}">${website}</a></p>
+    <p>(+34) 687 650 005</p>
+  </div>
+  <div class="cbox">
+    <div class="clabel">${isES?"CLIENTE":"COMPANY"}</div>
+    ${client.name?`<p>${client.name}</p>`:""}
+    ${client.vat?`<p>${client.vat}</p>`:""}
+    ${client.address?`<p style="margin-top:10px">${client.address.replace(/\n/g,"<br>")}</p>`:""}
+  </div>
+</div>
+<table>
+  <thead><tr>
+    <th class="desc">${isES?"Descripción":"Description"}</th>
+    <th style="padding-right:16px">${isES?"Precio":"Price"}</th>
+    <th style="padding-right:16px">U.</th>
+    <th style="padding-right:16px"></th>
+    <th>Sub Total</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="tot">Total excl VAT:&nbsp;&nbsp;&nbsp;${fmtN(total)}</div>
+${pageNotes?`<div class="notes">${pageNotes.replace(/\n/g,"<br>")}</div>`:""}
+</body></html>`;
+}
+
+// ─── QUOTE MODAL ──────────────────────────────────────────────────────────────
+function QuoteModal({ project, onClose }) {
+  const today = new Date().toISOString().split("T")[0];
+  const travelTotal = project.expenses.reduce((s,e) => s + (e[`opt${project.chosenOption||"A"}`]||0), 0);
+
+  const [quoteRef,   setQuoteRef]   = useState(defaultQuoteRef());
+  const [quoteDate,  setQuoteDate]  = useState(today);
+  const [lang,       setLang]       = useState("es");
+  const [website,    setWebsite]    = useState(MY_INFO.websites[0]);
+  const [client,     setClient]     = useState({ name: project.client||"", vat:"", address:"" });
+  const [pageNotes,  setPageNotes]  = useState("");
+  const [lines, setLines] = useState([
+    { id:1, title: project.ref, detail:"", unitPrice:"", qty:"", discount:"", subtotal: project.options[project.chosenOption||Object.keys(project.options)[0]]?.subtotal || "" },
+    ...(travelTotal > 0 ? [{ id:2, title: lang==="es"?"Gastos de viaje (transporte, alojamiento y dietas)":"Travel expenses (transport, accommodation and meals)", detail:"", unitPrice:"", qty:"", discount:"", subtotal: travelTotal }] : []),
+  ]);
+
+  const setC = (k,v) => setClient(c => ({...c,[k]:v}));
+  const addLine = () => setLines(l => [...l, { id: Date.now(), title:"", detail:"", unitPrice:"", qty:"", discount:"", subtotal:"" }]);
+  const delLine = (id) => setLines(l => l.filter(x => x.id !== id));
+  const updLine = (id, f, v) => setLines(l => l.map(x => {
+    if (x.id !== id) return x;
+    const upd = {...x, [f]: v};
+    // Auto-calc subtotal when unitPrice or qty changes
+    if ((f==="unitPrice"||f==="qty"||f==="discount") && upd.unitPrice!==""&&upd.qty!=="") {
+      const raw = Number(upd.unitPrice)*Number(upd.qty);
+      upd.subtotal = upd.discount ? Math.round(raw*(1-Number(upd.discount)/100)) : Math.round(raw);
+    }
+    return upd;
+  }));
+
+  const handlePreview = () => {
+    const w = window.open("","_blank");
+    w.document.write(generateQuoteHTML({ quoteRef, quoteDate, website, lang, client, lines, pageNotes }));
+    w.document.close();
+  };
+
+  const ist = { background: C.bg, border:`1px solid ${C.border}`, color: C.textDark };
+  const icl = "rounded-lg px-2 py-1.5 text-sm outline-none";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-6 px-4"
+      style={{ background:"rgba(0,0,0,0.5)" }}>
+      <div className="w-full max-w-3xl rounded-2xl shadow-2xl" style={{ background: C.card }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: C.border }}>
+          <h2 className="font-bold text-base" style={{ color: C.textDark }}>📄 Generar presupuesto</h2>
+          <div className="flex items-center gap-2">
+            <button onClick={handlePreview}
+              className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90"
+              style={{ background: C.navy, color:"#fff" }}>
+              <ExternalLink size={14}/> Vista previa / Imprimir
+            </button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 ml-1"><X size={20}/></button>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5 overflow-y-auto" style={{ maxHeight:"80vh" }}>
+          {/* Meta */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Nº Presupuesto</label>
+              <input value={quoteRef} onChange={e=>setQuoteRef(e.target.value)} className={`w-full ${icl}`} style={ist}/>
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Fecha</label>
+              <input type="date" value={quoteDate} onChange={e=>setQuoteDate(e.target.value)} className={`w-full ${icl}`} style={ist}/>
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Idioma</label>
+              <select value={lang} onChange={e=>setLang(e.target.value)} className={`w-full ${icl}`} style={ist}>
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Web</label>
+              <select value={website} onChange={e=>setWebsite(e.target.value)} className={`w-full ${icl}`} style={ist}>
+                {MY_INFO.websites.map(w=><option key={w}>{w}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Client */}
+          <div className="rounded-xl p-4 space-y-3" style={{ background:"#f8fafc", border:`1px solid ${C.border}` }}>
+            <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.textMid }}>
+              {lang==="es"?"Cliente":"Client / Company"}
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs block mb-1" style={{ color: C.textLight }}>Empresa</label>
+                <input value={client.name} onChange={e=>setC("name",e.target.value)} placeholder="PVH Europe B.V." className={`w-full ${icl}`} style={ist}/>
+              </div>
+              <div>
+                <label className="text-xs block mb-1" style={{ color: C.textLight }}>NIF / VAT</label>
+                <input value={client.vat} onChange={e=>setC("vat",e.target.value)} placeholder="NL852634250B01" className={`w-full ${icl}`} style={ist}/>
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs block mb-1" style={{ color: C.textLight }}>Dirección (una línea por Enter)</label>
+                <textarea value={client.address} onChange={e=>setC("address",e.target.value)}
+                  rows={3} placeholder={"Danzigerkade 165\n1013 AP - Amsterdam\nThe Netherlands"}
+                  className={`w-full ${icl} resize-none`} style={ist}/>
+              </div>
+            </div>
+          </div>
+
+          {/* Line items */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.textMid }}>Líneas de presupuesto</h3>
+              <button type="button" onClick={addLine}
+                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg"
+                style={{ background: C.navy+"12", color: C.navy }}>
+                <Plus size={12}/> Añadir línea
+              </button>
+            </div>
+            <div className="space-y-3">
+              {lines.map((l,i) => (
+                <div key={l.id} className="rounded-xl p-3 space-y-2"
+                  style={{ background:"#f8fafc", border:`1px solid ${C.border}` }}>
+                  <div className="flex gap-2">
+                    <span className="text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+                      style={{ background: C.navy, color:"#fff" }}>{i+1}</span>
+                    <input value={l.title} onChange={e=>updLine(l.id,"title",e.target.value)}
+                      placeholder="Título de la línea (ej. Retoque PRIO. 3 fotos)"
+                      className={`flex-1 ${icl} font-medium`} style={ist}/>
+                    <button type="button" onClick={()=>delLine(l.id)} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                      <X size={14}/>
+                    </button>
+                  </div>
+                  <div className="pl-7">
+                    <textarea value={l.detail} onChange={e=>updLine(l.id,"detail",e.target.value)}
+                      rows={2} placeholder="Descripción adicional (opcional)..."
+                      className={`w-full ${icl} resize-none text-xs`} style={{ ...ist, fontSize:11 }}/>
+                  </div>
+                  <div className="pl-7 grid grid-cols-4 gap-2">
+                    {[["Precio €","unitPrice","250"],["Uds","qty","3"],["Dto %","discount","15"],["Sub Total €","subtotal","750"]].map(([label,field,ph])=>(
+                      <div key={field}>
+                        <label className="text-xs block mb-1" style={{ color: C.textLight }}>{label}</label>
+                        <input type="number" value={l[field]} onChange={e=>updLine(l.id,field,e.target.value)}
+                          placeholder={ph} className={`w-full ${icl} text-right`}
+                          style={{ ...ist, background: field==="subtotal"?"#e8f5e9":C.bg,
+                            fontWeight: field==="subtotal"?"bold":"normal" }}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Total preview */}
+          <div className="text-right text-sm font-bold py-2 border-t" style={{ borderColor: C.border, color: C.green }}>
+            Total excl VAT: &nbsp;
+            {(() => {
+              const t = lines.reduce((s,l) => {
+                if (l.unitPrice!==""&&l.qty!=="") {
+                  const raw = Number(l.unitPrice)*Number(l.qty);
+                  return s + (l.discount ? raw*(1-Number(l.discount)/100) : raw);
+                }
+                return s + (Number(l.subtotal)||0);
+              }, 0);
+              return `€${Math.round(t).toLocaleString("es-ES")}`;
+            })()}
+          </div>
+
+          {/* Page 2 notes */}
+          <div>
+            <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>
+              Notas / Página 2 (opcional — aparece en hoja separada)
+            </label>
+            <textarea value={pageNotes} onChange={e=>setPageNotes(e.target.value)}
+              rows={3} placeholder={"x3 imágenes PRIO (edición el mismo día/24h)\nx10 imágenes NON PRIO (edición en los siguientes días)"}
+              className={`w-full ${icl} resize-none`} style={ist}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── RESUMEN VIEW ─────────────────────────────────────────────────────────────
 function ResumeView({ projects, onSelect, onNewProject }) {
   const [search, setSearch]             = useState("");
@@ -707,6 +1053,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
   const [draft, setDraft]               = useState(initial);
   const [activeOpt, setActiveOpt]       = useState(initial.chosenOption || Object.keys(initial.options)[0]);
   const [showExpenses, setShowExpenses] = useState(true);
+  const [showQuote, setShowQuote]       = useState(false);
   // Columnas de gasto visibles: arranca con las que ya tienen datos (mínimo A)
   const initExpOpts = () => { const u = usedExpOpts(initial.expenses); return u.length ? u : ["A"]; };
   const [visibleExpOpts, setVisibleExpOpts] = useState(initExpOpts);
@@ -747,6 +1094,11 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
             <div className="flex items-center gap-2">
               {!editing ? (
                 <>
+                  <button onClick={() => setShowQuote(true)}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: C.gold, color: C.navy }}>
+                    <FileText size={13} /> Presupuesto
+                  </button>
                   <button onClick={() => { setDraft(project); setEditing(true); }}
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
                     style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
@@ -870,6 +1222,13 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
           onChange={(locs) => setDraft(d => ({ ...d, locations: locs }))}
         />
 
+        {/* Documents */}
+        <DocumentsSection
+          documents={p.documents || []}
+          editing={editing}
+          onChange={(docs) => setDraft(d => ({ ...d, documents: docs }))}
+        />
+
         {/* Options */}
         <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <h3 className="text-sm font-semibold mb-3" style={{ color: C.textDark }}>Opciones de presupuesto</h3>
@@ -990,6 +1349,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
           )}
         </div>
       </div>
+      {showQuote && <QuoteModal project={project} onClose={() => setShowQuote(false)} />}
     </div>
   );
 }
@@ -1002,6 +1362,7 @@ function NewProjectView({ onBack, onCreate }) {
     year: new Date().getFullYear(), startDate: "", duration: "",
     notes: "",
     locations: [],
+    documents: [],
     options: { A: { subtotal: 0, total: 0 } },
     expenses: []
   });
@@ -1082,6 +1443,13 @@ function NewProjectView({ onBack, onCreate }) {
           locations={form.locations}
           editing={true}
           onChange={(locs) => setF("locations", locs)}
+        />
+
+        {/* Documents */}
+        <DocumentsSection
+          documents={form.documents}
+          editing={true}
+          onChange={(docs) => setF("documents", docs)}
         />
 
         {/* Options */}
