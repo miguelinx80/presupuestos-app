@@ -355,8 +355,12 @@ function LocationsSection({ locations = [], editing, onChange }) {
   );
 }
 
-// Siempre mostramos las 4 opciones en modo edición (igual que el Excel)
 const ALL_OPTS = ["A", "B", "C", "D"];
+
+// Qué opciones tienen al menos un valor en los gastos
+function usedExpOpts(expenses = []) {
+  return ALL_OPTS.filter(o => expenses.some(e => e[optKey(o)] != null));
+}
 
 // ─── EXPENSE ROW ─────────────────────────────────────────────────────────────
 function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
@@ -407,7 +411,7 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
             className="rounded px-2 py-1 text-xs outline-none w-20"
             style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
         </td>
-        {ALL_OPTS.map(o => (
+        {optKeys.map(o => (
           <td key={o} className="py-2 pr-1">
             <input type="number"
               value={row[optKey(o)] ?? ""}
@@ -624,6 +628,9 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
   const [draft, setDraft]               = useState(initial);
   const [activeOpt, setActiveOpt]       = useState(initial.chosenOption || Object.keys(initial.options)[0]);
   const [showExpenses, setShowExpenses] = useState(true);
+  // Columnas de gasto visibles: arranca con las que ya tienen datos (mínimo A)
+  const initExpOpts = () => { const u = usedExpOpts(initial.expenses); return u.length ? u : ["A"]; };
+  const [visibleExpOpts, setVisibleExpOpts] = useState(initExpOpts);
 
   const optKeys    = Object.keys(project.options);
   const chosenData = project.options[activeOpt];
@@ -805,17 +812,31 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
               Desglose de gastos {showExpenses ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             </button>
             {editing && (
-              <button type="button" onClick={addRow}
-                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg"
-                style={{ background: C.navy + "12", color: C.navy }}>
-                <Plus size={12} /> Añadir fila
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Botón para añadir la siguiente columna de opción */}
+                {(() => {
+                  const next = ALL_OPTS.find(o => !visibleExpOpts.includes(o));
+                  return next ? (
+                    <button type="button"
+                      onClick={() => setVisibleExpOpts(v => [...v, next])}
+                      className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg"
+                      style={{ background: OPTION_COLORS[next].bg, border: `1px solid ${OPTION_COLORS[next].border}60`, color: OPTION_COLORS[next].text }}>
+                      <Plus size={11} /> Op. {next}
+                    </button>
+                  ) : null;
+                })()}
+                <button type="button" onClick={addRow}
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg"
+                  style={{ background: C.navy + "12", color: C.navy }}>
+                  <Plus size={12} /> Añadir fila
+                </button>
+              </div>
             )}
           </div>
 
           {showExpenses && (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ minWidth: editing ? 960 : 680 }}>
+              <table className="w-full text-sm" style={{ minWidth: editing ? 800 + visibleExpOpts.length * 80 : 680 }}>
                 <thead>
                   <tr>
                     {editing && <th className="w-7" />}
@@ -823,17 +844,20 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
                     {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map(h => (
                       <th key={h} className="text-left pb-2 font-medium text-xs pr-3" style={{ color: C.textLight }}>{h}</th>
                     ))}
-                    {(editing ? ALL_OPTS : optKeys).map(o => (
-                      <th key={o} className="text-right pb-2 font-medium text-xs px-1"
-                        style={{ color: o === activeOpt ? OPTION_COLORS[o].badge : C.textLight }}>
+                    {(editing ? visibleExpOpts : usedExpOpts(project.expenses).length ? usedExpOpts(project.expenses) : optKeys).map(o => (
+                      <th key={o} className="text-right pb-2 font-bold text-xs px-1 whitespace-nowrap"
+                        style={{ color: OPTION_COLORS[o].badge }}>
                         Op. {o}
+                        {o === "B" && <span className="font-normal ml-1 text-xs" style={{ color: C.textLight }}>(real)</span>}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {p.expenses.map(row => (
-                    <ExpenseRow key={row.id} row={row} optKeys={optKeys} activeOpt={activeOpt}
+                    <ExpenseRow key={row.id} row={row}
+                      optKeys={editing ? visibleExpOpts : usedExpOpts(project.expenses).length ? usedExpOpts(project.expenses) : optKeys}
+                      activeOpt={activeOpt}
                       editing={editing}
                       onChange={(field, val) => updateRow(row.id, field, val)}
                       onDelete={() => deleteRow(row.id)} />
@@ -844,7 +868,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
                     <td colSpan={editing ? 8 : 7} className="pt-2.5 font-semibold text-sm" style={{ color: C.textDark }}>
                       Subtotal (Op. {activeOpt})
                     </td>
-                    <td colSpan={optKeys.length} className="pt-2.5 text-right font-bold" style={{ color: C.textDark }}>
+                    <td colSpan={(editing ? visibleExpOpts : optKeys).length} className="pt-2.5 text-right font-bold" style={{ color: C.textDark }}>
                       {fmt(computedSubtotal)}
                     </td>
                   </tr>
@@ -852,7 +876,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
                     <td colSpan={editing ? 8 : 7} className="pt-1 font-bold text-sm" style={{ color: C.green }}>
                       Total (+20% gastos finales)
                     </td>
-                    <td colSpan={optKeys.length} className="pt-1 text-right font-bold text-base" style={{ color: C.green }}>
+                    <td colSpan={(editing ? visibleExpOpts : optKeys).length} className="pt-1 text-right font-bold text-base" style={{ color: C.green }}>
                       {fmt(computedSubtotal * 1.2)}
                     </td>
                   </tr>
@@ -876,7 +900,8 @@ function NewProjectView({ onBack, onCreate }) {
     options: { A: { subtotal: 0, total: 0 } },
     expenses: []
   });
-  const [optCount, setOptCount] = useState(1);
+  const [optCount, setOptCount]         = useState(1);
+  const [visibleExpOpts, setVisibleExpOpts] = useState(["A"]);
   const setF    = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const optKeys = Object.keys(form.options);
 
@@ -991,29 +1016,42 @@ function NewProjectView({ onBack, onCreate }) {
         <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold" style={{ color: C.textDark }}>Gastos de viaje y producción</h3>
-            <button type="button" onClick={addRow}
-              className="text-xs font-medium flex items-center gap-1 px-2.5 py-1 rounded-lg"
-              style={{ background: C.navy + "12", color: C.navy }}>
-              <Plus size={12} /> Añadir gasto
-            </button>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const next = ALL_OPTS.find(o => !visibleExpOpts.includes(o));
+                return next ? (
+                  <button type="button"
+                    onClick={() => setVisibleExpOpts(v => [...v, next])}
+                    className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg"
+                    style={{ background: OPTION_COLORS[next].bg, border: `1px solid ${OPTION_COLORS[next].border}60`, color: OPTION_COLORS[next].text }}>
+                    <Plus size={11} /> Op. {next}
+                  </button>
+                ) : null;
+              })()}
+              <button type="button" onClick={addRow}
+                className="text-xs font-medium flex items-center gap-1 px-2.5 py-1 rounded-lg"
+                style={{ background: C.navy + "12", color: C.navy }}>
+                <Plus size={12} /> Añadir gasto
+              </button>
+            </div>
           </div>
           {form.expenses.length === 0
             ? <p className="text-xs text-center py-4" style={{ color: C.textLight }}>
                 Pulsa "Añadir gasto" para registrar vuelos, hotel, dietas...
               </p>
             : <div className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ minWidth: 820 }}>
+                <table className="w-full text-sm" style={{ minWidth: 680 + visibleExpOpts.length * 80 }}>
                   <thead>
                     <tr>
                       <th className="w-7" />
-                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...ALL_OPTS.map(o=>`Op. ${o}`)].map(h => (
+                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...visibleExpOpts.map(o => o === "B" ? "Op. B (real)" : `Op. ${o}`)].map(h => (
                         <th key={h} className="text-left pb-2 font-medium text-xs pr-2" style={{ color: C.textLight }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {form.expenses.map(row => (
-                      <ExpenseRow key={row.id} row={row} optKeys={ALL_OPTS} activeOpt="A"
+                      <ExpenseRow key={row.id} row={row} optKeys={visibleExpOpts} activeOpt="A"
                         editing={true}
                         onChange={(field, val) => updateRow(row.id, field, val)}
                         onDelete={() => deleteRow(row.id)} />
