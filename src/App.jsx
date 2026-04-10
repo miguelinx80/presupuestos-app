@@ -355,9 +355,14 @@ function LocationsSection({ locations = [], editing, onChange }) {
   );
 }
 
+// Siempre mostramos las 4 opciones en modo edición (igual que el Excel)
+const ALL_OPTS = ["A", "B", "C", "D"];
+
 // ─── EXPENSE ROW ─────────────────────────────────────────────────────────────
 function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
   const Icon = getCatIcon(row.desc);
+  // En edición mostramos siempre A·B·C·D; en lectura solo las opciones del proyecto
+  const editOpts = editing ? ALL_OPTS : optKeys;
 
   if (editing) {
     return (
@@ -402,13 +407,13 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
             className="rounded px-2 py-1 text-xs outline-none w-20"
             style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
         </td>
-        {optKeys.map(o => (
+        {ALL_OPTS.map(o => (
           <td key={o} className="py-2 pr-1">
             <input type="number"
               value={row[optKey(o)] ?? ""}
               onChange={e => onChange(optKey(o), e.target.value === "" ? null : parseFloat(e.target.value))}
-              placeholder="0"
-              className="rounded px-2 py-1 text-xs outline-none text-right w-20"
+              placeholder="—"
+              className="rounded px-2 py-1 text-xs outline-none text-right w-16"
               style={{ background: OPTION_COLORS[o].bg, border: `1px solid ${OPTION_COLORS[o].border}50`, color: C.textDark }} />
           </td>
         ))}
@@ -818,7 +823,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
                     {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map(h => (
                       <th key={h} className="text-left pb-2 font-medium text-xs pr-3" style={{ color: C.textLight }}>{h}</th>
                     ))}
-                    {optKeys.map(o => (
+                    {(editing ? ALL_OPTS : optKeys).map(o => (
                       <th key={o} className="text-right pb-2 font-medium text-xs px-1"
                         style={{ color: o === activeOpt ? OPTION_COLORS[o].badge : C.textLight }}>
                         Op. {o}
@@ -1001,14 +1006,14 @@ function NewProjectView({ onBack, onCreate }) {
                   <thead>
                     <tr>
                       <th className="w-7" />
-                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...optKeys.map(o=>`Op. ${o}`)].map(h => (
+                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...ALL_OPTS.map(o=>`Op. ${o}`)].map(h => (
                         <th key={h} className="text-left pb-2 font-medium text-xs pr-2" style={{ color: C.textLight }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {form.expenses.map(row => (
-                      <ExpenseRow key={row.id} row={row} optKeys={optKeys} activeOpt={optKeys[0]}
+                      <ExpenseRow key={row.id} row={row} optKeys={ALL_OPTS} activeOpt="A"
                         editing={true}
                         onChange={(field, val) => updateRow(row.id, field, val)}
                         onDelete={() => deleteRow(row.id)} />
