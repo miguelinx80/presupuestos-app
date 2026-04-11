@@ -340,40 +340,24 @@ function StatCard({ label, value, sub, icon: Icon, accent }) {
   );
 }
 
-// ─── SUNCALC HELPER ──────────────────────────────────────────────────────────
-function buildSunCalcUrl(mapsUrl, date, name) {
-  // Try to extract coords from Google Maps URL patterns:
-  //   /@lat,lng  or  ?q=lat,lng  or  /place/lat,lng  or  ll=lat,lng
-  if (mapsUrl) {
-    const patterns = [
-      /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,          // maps.google.com/@lat,lng
-      /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,     // ?q=lat,lng
-      /place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/,     // /place/lat,lng
-      /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,         // ll=lat,lng
-    ];
-    for (const re of patterns) {
-      const m = mapsUrl.match(re);
-      if (m) {
-        const [, lat, lng] = m;
-        const d = date || new Date().toISOString().split("T")[0];
-        // SunCalc format: suncalc.org/#/lat,lng,zoom/date/time
-        return `https://www.suncalc.org/#/${lat},${lng},17/${d.replace(/-/g,"/")}/10:00/1/3`;
-      }
-    }
-    // If Maps URL has ?q=Name, pass it through as a search fallback
-    const qm = mapsUrl.match(/[?&]q=([^&]+)/);
-    if (qm) {
-      const query = decodeURIComponent(qm[1].replace(/\+/g, " "));
-      return `https://www.suncalc.org/#/${encodeURIComponent(query)}`;
-    }
-  }
-  // Fallback: search by location name
-  if (name) return `https://www.suncalc.org/#/${encodeURIComponent(name)}`;
-  return null;
+// ─── SUNCALC & WEATHER HELPERS ───────────────────────────────────────────────
+// Uses project city + country for reliable links (no Google Maps URL parsing)
+function buildSunCalcUrl(city, country, date) {
+  const place = [city, country].filter(Boolean).join(", ");
+  if (!place) return null;
+  const d = date || new Date().toISOString().split("T")[0];
+  // SunCalc accepts place names in the hash — search-based
+  return `https://www.suncalc.org/#/${encodeURIComponent(place)},14/${d.replace(/-/g,"/")}/10:00/1/3`;
+}
+
+function buildWeatherUrl(city, country) {
+  const place = [city, country].filter(Boolean).join(", ");
+  if (!place) return null;
+  return `https://wttr.in/${encodeURIComponent(place)}?lang=es`;
 }
 
 // ─── LOCATIONS SECTION ────────────────────────────────────────────────────────
-function LocationsSection({ locations = [], editing, onChange }) {
+function LocationsSection({ locations = [], editing, onChange, city = "", country = "" }) {
   const addLoc = () => onChange([...locations, { id: newLocId(), name: "", mapsUrl: "", date: "", time: "", notes: "" }]);
   const updateLoc = (id, field, val) => onChange(locations.map(l => l.id === id ? { ...l, [field]: val } : l));
   const deleteLoc = (id) => onChange(locations.filter(l => l.id !== id));
@@ -467,7 +451,7 @@ function LocationsSection({ locations = [], editing, onChange }) {
                           {loc.name || "Sin nombre"}
                         </span>}
                     {(() => {
-                      const scUrl = buildSunCalcUrl(loc.mapsUrl, loc.date, loc.name);
+                      const scUrl = buildSunCalcUrl(city, country, loc.date);
                       return scUrl ? (
                         <a href={scUrl} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80"
@@ -478,19 +462,15 @@ function LocationsSection({ locations = [], editing, onChange }) {
                       ) : null;
                     })()}
                     {(() => {
-                      // Weather link — uses wttr.in for quick forecast or Google weather search
-                      const place = loc.name || "";
-                      const city = place.replace(/.*–\s*/, "").replace(/\(.*\)/, "").trim();
-                      if (!city) return null;
-                      const weatherUrl = `https://wttr.in/${encodeURIComponent(city)}?lang=es`;
-                      return (
+                      const weatherUrl = buildWeatherUrl(city, country);
+                      return weatherUrl ? (
                         <a href={weatherUrl} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80"
                           style={{ background: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd" }}
                           title="Ver previsión meteorológica">
                           <CloudSun size={11}/> Meteo
                         </a>
-                      );
+                      ) : null;
                     })()}
                   </div>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -1606,6 +1586,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
           locations={p.locations || []}
           editing={editing}
           onChange={(locs) => setDraft(d => ({ ...d, locations: locs }))}
+          city={p.city} country={p.country}
         />
 
         {/* Timeline (solo modo lectura) */}
@@ -1854,6 +1835,7 @@ function NewProjectView({ onBack, onCreate }) {
           locations={form.locations}
           editing={true}
           onChange={(locs) => setF("locations", locs)}
+          city={form.city} country={form.country}
         />
 
         {/* Documents */}
