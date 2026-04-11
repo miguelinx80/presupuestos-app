@@ -4,7 +4,8 @@ import {
   Building2, Search, Plus, ChevronRight, ArrowLeft, MapPin, User,
   Calendar, Ruler, TrendingUp, CheckCircle2, Clock, XCircle,
   Euro, Edit3, Trash2, Save, X, Plane, Car, Hotel,
-  Utensils, Bus, ExternalLink, ChevronDown, ChevronUp, Navigation, FileText
+  Utensils, Bus, ExternalLink, ChevronDown, ChevronUp, Navigation, FileText,
+  Copy, CloudSun, ClipboardCheck, Check
 } from "lucide-react";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -339,6 +340,38 @@ function StatCard({ label, value, sub, icon: Icon, accent }) {
   );
 }
 
+// ─── SUNCALC HELPER ──────────────────────────────────────────────────────────
+function buildSunCalcUrl(mapsUrl, date, name) {
+  // Try to extract coords from Google Maps URL patterns:
+  //   /@lat,lng  or  ?q=lat,lng  or  /place/lat,lng  or  ll=lat,lng
+  if (mapsUrl) {
+    const patterns = [
+      /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,          // maps.google.com/@lat,lng
+      /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,     // ?q=lat,lng
+      /place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/,     // /place/lat,lng
+      /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,         // ll=lat,lng
+    ];
+    for (const re of patterns) {
+      const m = mapsUrl.match(re);
+      if (m) {
+        const [, lat, lng] = m;
+        const d = date || new Date().toISOString().split("T")[0];
+        // SunCalc format: suncalc.org/#/lat,lng,zoom/date/time
+        return `https://www.suncalc.org/#/${lat},${lng},17/${d.replace(/-/g,"/")}/10:00/1/3`;
+      }
+    }
+    // If Maps URL has ?q=Name, pass it through as a search fallback
+    const qm = mapsUrl.match(/[?&]q=([^&]+)/);
+    if (qm) {
+      const query = decodeURIComponent(qm[1].replace(/\+/g, " "));
+      return `https://www.suncalc.org/#/${encodeURIComponent(query)}`;
+    }
+  }
+  // Fallback: search by location name
+  if (name) return `https://www.suncalc.org/#/${encodeURIComponent(name)}`;
+  return null;
+}
+
 // ─── LOCATIONS SECTION ────────────────────────────────────────────────────────
 function LocationsSection({ locations = [], editing, onChange }) {
   const addLoc = () => onChange([...locations, { id: newLocId(), name: "", mapsUrl: "", date: "", time: "", notes: "" }]);
@@ -433,6 +466,32 @@ function LocationsSection({ locations = [], editing, onChange }) {
                           <MapPin size={13} className="inline mr-1" style={{ color: C.textLight }} />
                           {loc.name || "Sin nombre"}
                         </span>}
+                    {(() => {
+                      const scUrl = buildSunCalcUrl(loc.mapsUrl, loc.date, loc.name);
+                      return scUrl ? (
+                        <a href={scUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80"
+                          style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}
+                          title="Ver posición del sol en SunCalc">
+                          ☀️ SunCalc
+                        </a>
+                      ) : null;
+                    })()}
+                    {(() => {
+                      // Weather link — uses wttr.in for quick forecast or Google weather search
+                      const place = loc.name || "";
+                      const city = place.replace(/.*–\s*/, "").replace(/\(.*\)/, "").trim();
+                      if (!city) return null;
+                      const weatherUrl = `https://wttr.in/${encodeURIComponent(city)}?lang=es`;
+                      return (
+                        <a href={weatherUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80"
+                          style={{ background: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd" }}
+                          title="Ver previsión meteorológica">
+                          <CloudSun size={11}/> Meteo
+                        </a>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
                     {loc.date && (
@@ -455,6 +514,52 @@ function LocationsSection({ locations = [], editing, onChange }) {
 }
 
 const ALL_OPTS = ["A", "B", "C", "D"];
+
+// ─── EXPENSE TEMPLATES ──────────────────────────────────────────────────────
+const EXPENSE_TEMPLATES = {
+  "Viaje Europa (avión)": [
+    { desc: "Vuelo ida", provider: "", tarifa: "" },
+    { desc: "Vuelo vuelta", provider: "", tarifa: "" },
+    { desc: "Hotel", provider: "", tarifa: "" },
+    { desc: "Transporte aeropuerto", provider: "", tarifa: "" },
+    { desc: "Dietas", provider: "", tarifa: "" },
+    { desc: "Días fuera", provider: "", tarifa: "" },
+  ],
+  "Viaje Europa (coche)": [
+    { desc: "Alquiler coche", provider: "", tarifa: "" },
+    { desc: "Gasolina+peajes", provider: "", tarifa: "" },
+    { desc: "Hotel", provider: "", tarifa: "" },
+    { desc: "Dietas", provider: "", tarifa: "" },
+    { desc: "Días fuera", provider: "", tarifa: "" },
+  ],
+  "Nacional (avión)": [
+    { desc: "Vuelo ida", provider: "", tarifa: "" },
+    { desc: "Vuelo vuelta", provider: "", tarifa: "" },
+    { desc: "Hotel", provider: "", tarifa: "" },
+    { desc: "Transporte local", provider: "", tarifa: "" },
+    { desc: "Dietas", provider: "", tarifa: "" },
+  ],
+  "Nacional (tren/coche)": [
+    { desc: "Transporte ida/vuelta", provider: "", tarifa: "" },
+    { desc: "Hotel", provider: "", tarifa: "" },
+    { desc: "Dietas", provider: "", tarifa: "" },
+  ],
+  "Local (sin alojamiento)": [
+    { desc: "Transporte Sevilla", provider: "", tarifa: "" },
+    { desc: "Dietas", provider: "", tarifa: "" },
+  ],
+};
+
+function applyExpenseTemplate(templateName) {
+  const tpl = EXPENSE_TEMPLATES[templateName];
+  if (!tpl) return [];
+  return tpl.map((t, i) => ({
+    id: Date.now() + i,
+    desc: t.desc, url: "", date: "", time: "",
+    provider: t.provider, tarifa: t.tarifa,
+    optA: null, optB: null, optC: null, optD: null,
+  }));
+}
 
 // Qué opciones tienen al menos un valor en los gastos
 function usedExpOpts(expenses = []) {
@@ -617,6 +722,215 @@ function DocumentsSection({ documents = [], editing, onChange }) {
   );
 }
 
+// ─── CHECKLIST DE EQUIPO ─────────────────────────────────────────────────────
+const DEFAULT_CHECKLIST = [
+  "Cámara (cuerpo)", "Objetivo gran angular", "Objetivo 50mm", "Trípode",
+  "Flash externo", "Baterías extra", "Tarjetas SD", "Portátil + cargador",
+  "Disco duro externo", "Nivel láser", "Cinta métrica", "Gaffer tape",
+  "Paños de limpieza", "Filtros ND/polarizador", "Light meter",
+];
+
+function getDefaultChecklist() {
+  try { return JSON.parse(localStorage.getItem("presupuestos_defaultChecklist") || "null") || DEFAULT_CHECKLIST; }
+  catch { return DEFAULT_CHECKLIST; }
+}
+function saveDefaultChecklist(items) {
+  try { localStorage.setItem("presupuestos_defaultChecklist", JSON.stringify(items)); } catch {}
+}
+
+function ChecklistSection({ checklist = [], editing, onChange }) {
+  const [editingDefaults, setEditingDefaults] = useState(false);
+  const [defaults, setDefaults]               = useState(getDefaultChecklist);
+  const [newItem, setNewItem]                 = useState("");
+
+  // Initialize checklist from defaults if empty and in edit mode
+  const initFromDefaults = () => {
+    const items = getDefaultChecklist().map((name, i) => ({ id: Date.now() + i, name, checked: false }));
+    onChange(items);
+  };
+
+  const toggle = (id) => onChange(checklist.map(c => c.id === id ? { ...c, checked: !c.checked } : c));
+  const addItem = () => {
+    if (!newItem.trim()) return;
+    onChange([...checklist, { id: Date.now(), name: newItem.trim(), checked: false }]);
+    setNewItem("");
+  };
+  const delItem = (id) => onChange(checklist.filter(c => c.id !== id));
+  const saveAsDefault = () => {
+    saveDefaultChecklist(checklist.map(c => c.name));
+    setEditingDefaults(false);
+  };
+
+  const total = checklist.length;
+  const checked = checklist.filter(c => c.checked).length;
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: C.textDark }}>
+          <ClipboardCheck size={15} style={{ color: C.navy }} /> Checklist de equipo
+          {total > 0 && (
+            <span className="text-xs font-normal ml-1 px-2 py-0.5 rounded-full"
+              style={{ background: checked === total ? "#dcfce7" : "#fef3c7",
+                color: checked === total ? "#166534" : "#92400e" }}>
+              {checked}/{total}
+            </span>
+          )}
+        </h3>
+        <div className="flex items-center gap-2">
+          {checklist.length === 0 && editing && (
+            <button type="button" onClick={initFromDefaults}
+              className="text-xs font-medium flex items-center gap-1 px-2.5 py-1 rounded-lg"
+              style={{ background: C.navy+"12", color: C.navy }}>
+              <Plus size={11}/> Cargar lista base
+            </button>
+          )}
+          {editing && checklist.length > 0 && (
+            <button type="button" onClick={saveAsDefault}
+              className="text-xs font-medium px-2 py-1 rounded-lg"
+              style={{ background: "#f0fdf4", color: C.green }}
+              title="Guardar esta lista como predeterminada">
+              <Save size={11} className="inline mr-1"/>Guardar como base
+            </button>
+          )}
+        </div>
+      </div>
+
+      {checklist.length === 0 && !editing && (
+        <p className="text-xs" style={{ color: C.textLight }}>Sin checklist configurada.</p>
+      )}
+
+      <div className="space-y-1">
+        {checklist.map(item => (
+          <div key={item.id} className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-slate-50 group">
+            <button type="button" onClick={() => toggle(item.id)}
+              className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+              style={{ background: item.checked ? C.green : "transparent",
+                border: `2px solid ${item.checked ? C.green : C.border}` }}>
+              {item.checked && <Check size={12} color="#fff"/>}
+            </button>
+            <span className="text-sm flex-1" style={{
+              color: item.checked ? C.textLight : C.textDark,
+              textDecoration: item.checked ? "line-through" : "none" }}>
+              {item.name}
+            </span>
+            {editing && (
+              <button type="button" onClick={() => delItem(item.id)}
+                className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <X size={13}/>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {editing && (
+        <div className="flex gap-2 mt-3">
+          <input value={newItem} onChange={e => setNewItem(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addItem())}
+            placeholder="Añadir elemento..."
+            className="flex-1 rounded-lg px-2 py-1.5 text-sm outline-none"
+            style={{ background: "#f8fafc", border: `1px solid ${C.border}`, color: C.textDark }}/>
+          <button type="button" onClick={addItem}
+            className="text-xs font-medium px-2.5 py-1.5 rounded-lg"
+            style={{ background: C.navy+"12", color: C.navy }}>
+            <Plus size={12}/>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PROJECT TIMELINE ────────────────────────────────────────────────────────
+function ProjectTimeline({ project }) {
+  // Collect all dated events: locations, expenses (flights, hotels)
+  const events = [];
+
+  (project.locations || []).forEach(loc => {
+    if (loc.date) events.push({
+      date: loc.date, time: loc.time || "", type: "location",
+      label: loc.name || "Ubicación", icon: MapPin, color: C.navy,
+    });
+  });
+
+  (project.expenses || []).forEach(exp => {
+    if (exp.date) {
+      const Icon = getCatIcon(exp.desc);
+      let color = C.textMid;
+      const d = exp.desc.toLowerCase();
+      if (d.includes(">") || d.includes("vuelo")) color = "#0369a1";
+      else if (d.includes("hotel")) color = "#7c3aed";
+      else if (d.includes("coche") || d.includes("car")) color = "#059669";
+      events.push({
+        date: exp.date, time: exp.time || "", type: "expense",
+        label: exp.desc, icon: Icon, color,
+        sub: [exp.provider, exp.tarifa ? `${exp.tarifa}` : ""].filter(Boolean).join(" · "),
+      });
+    }
+  });
+
+  if (events.length === 0) return null;
+
+  events.sort((a, b) => {
+    const dc = a.date.localeCompare(b.date);
+    return dc !== 0 ? dc : (a.time || "").localeCompare(b.time || "");
+  });
+
+  // Group by date
+  const grouped = {};
+  events.forEach(ev => {
+    if (!grouped[ev.date]) grouped[ev.date] = [];
+    grouped[ev.date].push(ev);
+  });
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+      <h3 className="text-sm font-semibold flex items-center gap-2 mb-4" style={{ color: C.textDark }}>
+        <Calendar size={15} style={{ color: C.navy }} /> Timeline del proyecto
+      </h3>
+      <div className="relative pl-6">
+        {/* Vertical line */}
+        <div className="absolute left-2.5 top-1 bottom-1 w-0.5 rounded" style={{ background: C.border }} />
+
+        {Object.entries(grouped).map(([date, evts], gi) => (
+          <div key={date} className={gi > 0 ? "mt-4" : ""}>
+            {/* Date header */}
+            <div className="flex items-center gap-2 mb-2 -ml-6">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center z-10 flex-shrink-0"
+                style={{ background: C.navy }}>
+                <Calendar size={10} color="#fff" />
+              </div>
+              <span className="text-xs font-bold" style={{ color: C.textDark }}>{fmtDate(date)}</span>
+              <span className="text-xs" style={{ color: C.textLight }}>
+                {new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "long" })}
+              </span>
+            </div>
+
+            {/* Events for this date */}
+            {evts.map((ev, i) => {
+              const Icon = ev.icon;
+              return (
+                <div key={i} className="flex items-start gap-2 ml-0 mb-2">
+                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: ev.color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Icon size={12} style={{ color: ev.color, flexShrink: 0 }} />
+                      <span className="text-sm font-medium" style={{ color: C.textDark }}>{ev.label}</span>
+                      {ev.time && <span className="text-xs" style={{ color: C.textLight }}>{ev.time}</span>}
+                    </div>
+                    {ev.sub && <div className="text-xs mt-0.5" style={{ color: C.textMid }}>{ev.sub}</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── QUOTE HTML GENERATOR ─────────────────────────────────────────────────────
 function generateQuoteHTML({ quoteRef, quoteDate, website, lang, client, lines, pageNotes }) {
   const isES = lang === "es";
@@ -698,17 +1012,56 @@ ${pageNotes?`<div class="notes">${pageNotes.replace(/\n/g,"<br>")}</div>`:""}
 </body></html>`;
 }
 
+// ─── CLIENT HISTORY ──────────────────────────────────────────────────────────
+function getClientHistory() {
+  try { return JSON.parse(localStorage.getItem("presupuestos_clients") || "[]"); }
+  catch { return []; }
+}
+function saveClientToHistory(client) {
+  if (!client.name?.trim()) return;
+  const hist = getClientHistory().filter(c => c.name !== client.name);
+  hist.unshift(client);
+  try { localStorage.setItem("presupuestos_clients", JSON.stringify(hist.slice(0, 20))); } catch {}
+}
+
+// ─── SMART QUOTE REF ─────────────────────────────────────────────────────────
+function smartQuoteRef() {
+  // Reads existing quote refs from localStorage to auto-increment
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yy = String(d.getFullYear()).slice(2);
+  const prefix = `${dd}${mm}${yy}_`;
+  try {
+    const hist = JSON.parse(localStorage.getItem("presupuestos_quoteRefs") || "[]");
+    const todayRefs = hist.filter(r => r.startsWith(prefix));
+    const maxN = todayRefs.reduce((mx, r) => {
+      const n = parseInt(r.split("_")[1], 10);
+      return n > mx ? n : mx;
+    }, 0);
+    return `${prefix}${maxN + 1}`;
+  } catch { return `${prefix}1`; }
+}
+function saveQuoteRef(ref) {
+  try {
+    const hist = JSON.parse(localStorage.getItem("presupuestos_quoteRefs") || "[]");
+    if (!hist.includes(ref)) { hist.push(ref); localStorage.setItem("presupuestos_quoteRefs", JSON.stringify(hist.slice(-100))); }
+  } catch {}
+}
+
 // ─── QUOTE MODAL ──────────────────────────────────────────────────────────────
 function QuoteModal({ project, onClose }) {
   const today = new Date().toISOString().split("T")[0];
   const travelTotal = project.expenses.reduce((s,e) => s + (e[`opt${project.chosenOption||"A"}`]||0), 0);
+  const clientHist = useMemo(() => getClientHistory(), []);
 
-  const [quoteRef,   setQuoteRef]   = useState(defaultQuoteRef());
+  const [quoteRef,   setQuoteRef]   = useState(smartQuoteRef());
   const [quoteDate,  setQuoteDate]  = useState(today);
   const [lang,       setLang]       = useState("es");
   const [website,    setWebsite]    = useState(MY_INFO.websites[0]);
   const [client,     setClient]     = useState({ name: project.client||"", vat:"", address:"" });
   const [pageNotes,  setPageNotes]  = useState("");
+  const [showClientPicker, setShowClientPicker] = useState(false);
   const [lines, setLines] = useState([
     { id:1, title: project.ref, detail:"", unitPrice:"", qty:"", discount:"", subtotal: project.options[project.chosenOption||Object.keys(project.options)[0]]?.subtotal || "" },
     ...(travelTotal > 0 ? [{ id:2, title: lang==="es"?"Gastos de viaje (transporte, alojamiento y dietas)":"Travel expenses (transport, accommodation and meals)", detail:"", unitPrice:"", qty:"", discount:"", subtotal: travelTotal }] : []),
@@ -729,6 +1082,8 @@ function QuoteModal({ project, onClose }) {
   }));
 
   const handlePreview = () => {
+    saveClientToHistory(client);
+    saveQuoteRef(quoteRef);
     const w = window.open("","_blank");
     w.document.write(generateQuoteHTML({ quoteRef, quoteDate, website, lang, client, lines, pageNotes }));
     w.document.close();
@@ -782,9 +1137,34 @@ function QuoteModal({ project, onClose }) {
 
           {/* Client */}
           <div className="rounded-xl p-4 space-y-3" style={{ background:"#f8fafc", border:`1px solid ${C.border}` }}>
-            <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.textMid }}>
-              {lang==="es"?"Cliente":"Client / Company"}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.textMid }}>
+                {lang==="es"?"Cliente":"Client / Company"}
+              </h3>
+              {clientHist.length > 0 && (
+                <div className="relative">
+                  <button type="button" onClick={() => setShowClientPicker(v => !v)}
+                    className="text-xs font-medium flex items-center gap-1 px-2 py-0.5 rounded-lg"
+                    style={{ background: C.navy+"12", color: C.navy }}>
+                    <Clock size={10}/> Recientes
+                  </button>
+                  {showClientPicker && (
+                    <div className="absolute right-0 top-7 z-50 rounded-xl shadow-lg py-1 w-56"
+                      style={{ background: C.card, border: `1px solid ${C.border}` }}>
+                      {clientHist.map((c, i) => (
+                        <button key={i} type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs"
+                          style={{ color: C.textDark }}
+                          onClick={() => { setClient(c); setShowClientPicker(false); }}>
+                          <div className="font-medium">{c.name}</div>
+                          {c.vat && <div style={{ color: C.textLight }}>{c.vat}</div>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs block mb-1" style={{ color: C.textLight }}>Empresa</label>
@@ -1047,7 +1427,7 @@ function ResumeView({ projects, onSelect, onNewProject }) {
 }
 
 // ─── DETAIL VIEW ──────────────────────────────────────────────────────────────
-function DetailView({ project: initial, onBack, onSave, onDelete }) {
+function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate }) {
   const [project, setProject]           = useState(initial);
   const [editing, setEditing]           = useState(false);
   const [draft, setDraft]               = useState(initial);
@@ -1098,6 +1478,12 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
                     style={{ background: C.gold, color: C.navy }}>
                     <FileText size={13} /> Presupuesto
+                  </button>
+                  <button onClick={() => onDuplicate(project)}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+                    title="Duplicar proyecto">
+                    <Copy size={13} /> Duplicar
                   </button>
                   <button onClick={() => { setDraft(project); setEditing(true); }}
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
@@ -1222,11 +1608,21 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
           onChange={(locs) => setDraft(d => ({ ...d, locations: locs }))}
         />
 
+        {/* Timeline (solo modo lectura) */}
+        {!editing && <ProjectTimeline project={p} />}
+
         {/* Documents */}
         <DocumentsSection
           documents={p.documents || []}
           editing={editing}
           onChange={(docs) => setDraft(d => ({ ...d, documents: docs }))}
+        />
+
+        {/* Checklist de equipo */}
+        <ChecklistSection
+          checklist={p.checklist || []}
+          editing={editing}
+          onChange={(cl) => setDraft(d => ({ ...d, checklist: cl }))}
         />
 
         {/* Options */}
@@ -1277,6 +1673,20 @@ function DetailView({ project: initial, onBack, onSave, onDelete }) {
             </button>
             {editing && (
               <div className="flex items-center gap-2">
+                {/* Plantilla de gastos */}
+                <select
+                  defaultValue=""
+                  onChange={e => {
+                    if (!e.target.value) return;
+                    const rows = applyExpenseTemplate(e.target.value);
+                    setDraft(d => ({ ...d, expenses: [...d.expenses, ...rows] }));
+                    e.target.value = "";
+                  }}
+                  className="text-xs rounded-lg px-2 py-1 outline-none"
+                  style={{ background: "#f0fdf4", border: `1px solid ${C.border}`, color: C.textMid }}>
+                  <option value="">📋 Plantilla...</option>
+                  {Object.keys(EXPENSE_TEMPLATES).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
                 {/* Botón para añadir la siguiente columna de opción */}
                 {(() => {
                   const next = ALL_OPTS.find(o => !visibleExpOpts.includes(o));
@@ -1363,6 +1773,7 @@ function NewProjectView({ onBack, onCreate }) {
     notes: "",
     locations: [],
     documents: [],
+    checklist: [],
     options: { A: { subtotal: 0, total: 0 } },
     expenses: []
   });
@@ -1452,6 +1863,13 @@ function NewProjectView({ onBack, onCreate }) {
           onChange={(docs) => setF("documents", docs)}
         />
 
+        {/* Checklist de equipo */}
+        <ChecklistSection
+          checklist={form.checklist || []}
+          editing={true}
+          onChange={(cl) => setF("checklist", cl)}
+        />
+
         {/* Options */}
         <div className="rounded-xl p-5 space-y-3" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between">
@@ -1497,6 +1915,20 @@ function NewProjectView({ onBack, onCreate }) {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold" style={{ color: C.textDark }}>Gastos de viaje y producción</h3>
             <div className="flex items-center gap-2">
+              {/* Plantilla */}
+              <select
+                defaultValue=""
+                onChange={e => {
+                  if (!e.target.value) return;
+                  const rows = applyExpenseTemplate(e.target.value);
+                  setForm(f => ({ ...f, expenses: [...f.expenses, ...rows] }));
+                  e.target.value = "";
+                }}
+                className="text-xs rounded-lg px-2 py-1 outline-none"
+                style={{ background: "#f0fdf4", border: `1px solid ${C.border}`, color: C.textMid }}>
+                <option value="">📋 Plantilla...</option>
+                {Object.keys(EXPENSE_TEMPLATES).map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
               {(() => {
                 const next = ALL_OPTS.find(o => !visibleExpOpts.includes(o));
                 return next ? (
@@ -1559,13 +1991,24 @@ export default function App() {
 
   const selected = projects.find(p => p.id === selectedId);
 
-  const handleSelect = (p)  => { setSelectedId(p.id); setView("detail"); };
-  const handleSave   = (u)  => setProjects(prev => prev.map(p => p.id === u.id ? u : p));
-  const handleDelete = (id) => { setProjects(prev => prev.filter(p => p.id !== id)); setView("list"); };
-  const handleCreate = (p)  => { setProjects(prev => [p, ...prev]); setView("list"); };
+  const handleSelect    = (p)  => { setSelectedId(p.id); setView("detail"); };
+  const handleSave      = (u)  => setProjects(prev => prev.map(p => p.id === u.id ? u : p));
+  const handleDelete    = (id) => { setProjects(prev => prev.filter(p => p.id !== id)); setView("list"); };
+  const handleCreate    = (p)  => { setProjects(prev => [p, ...prev]); setView("list"); };
+  const handleDuplicate = (p)  => {
+    const dup = {
+      ...JSON.parse(JSON.stringify(p)),
+      id: Date.now(),
+      ref: p.ref + " (copia)",
+      status: "Pendiente",
+      chosenOption: null,
+    };
+    setProjects(prev => [dup, ...prev]);
+    setSelectedId(dup.id);
+  };
 
   if (view === "detail" && selected)
-    return <DetailView project={selected} onBack={() => setView("list")} onSave={handleSave} onDelete={handleDelete} />;
+    return <DetailView project={selected} onBack={() => setView("list")} onSave={handleSave} onDelete={handleDelete} onDuplicate={handleDuplicate} />;
   if (view === "new")
     return <NewProjectView onBack={() => setView("list")} onCreate={handleCreate} />;
   return <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} />;
