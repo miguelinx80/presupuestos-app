@@ -340,16 +340,7 @@ function StatCard({ label, value, sub, icon: Icon, accent }) {
   );
 }
 
-// ─── SUNCALC & WEATHER HELPERS ───────────────────────────────────────────────
-// Uses project city + country for reliable links (no Google Maps URL parsing)
-function buildSunCalcUrl(city, country, date) {
-  const place = [city, country].filter(Boolean).join(", ");
-  if (!place) return null;
-  const d = date || new Date().toISOString().split("T")[0];
-  // SunCalc accepts place names in the hash — search-based
-  return `https://www.suncalc.org/#/${encodeURIComponent(place)},14/${d.replace(/-/g,"/")}/10:00/1/3`;
-}
-
+// ─── WEATHER HELPER ──────────────────────────────────────────────────────────
 function buildWeatherUrl(city, country) {
   const place = [city, country].filter(Boolean).join(", ");
   if (!place) return null;
@@ -358,7 +349,7 @@ function buildWeatherUrl(city, country) {
 
 // ─── LOCATIONS SECTION ────────────────────────────────────────────────────────
 function LocationsSection({ locations = [], editing, onChange, city = "", country = "" }) {
-  const addLoc = () => onChange([...locations, { id: newLocId(), name: "", mapsUrl: "", date: "", time: "", notes: "" }]);
+  const addLoc = () => onChange([...locations, { id: newLocId(), name: "", mapsUrl: "", suncalcUrl: "", date: "", time: "", notes: "" }]);
   const updateLoc = (id, field, val) => onChange(locations.map(l => l.id === id ? { ...l, [field]: val } : l));
   const deleteLoc = (id) => onChange(locations.filter(l => l.id !== id));
 
@@ -417,10 +408,17 @@ function LocationsSection({ locations = [], editing, onChange, city = "", countr
                       className="w-full rounded px-2 py-1.5 text-sm outline-none"
                       style={inputSt} />
                   </div>
-                  <div className="col-span-2">
+                  <div>
                     <label className="text-xs block mb-1" style={{ color: C.textLight }}>Enlace Google Maps</label>
                     <input value={loc.mapsUrl} onChange={e => updateLoc(loc.id, "mapsUrl", e.target.value)}
                       placeholder="https://maps.google.com/?q=..."
+                      className="w-full rounded px-2 py-1.5 text-sm outline-none"
+                      style={inputSt} />
+                  </div>
+                  <div>
+                    <label className="text-xs block mb-1" style={{ color: C.textLight }}>Enlace SunCalc ☀️</label>
+                    <input value={loc.suncalcUrl || ""} onChange={e => updateLoc(loc.id, "suncalcUrl", e.target.value)}
+                      placeholder="https://www.suncalc.org/#/..."
                       className="w-full rounded px-2 py-1.5 text-sm outline-none"
                       style={inputSt} />
                   </div>
@@ -450,17 +448,14 @@ function LocationsSection({ locations = [], editing, onChange, city = "", countr
                           <MapPin size={13} className="inline mr-1" style={{ color: C.textLight }} />
                           {loc.name || "Sin nombre"}
                         </span>}
-                    {(() => {
-                      const scUrl = buildSunCalcUrl(city, country, loc.date);
-                      return scUrl ? (
-                        <a href={scUrl} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80"
-                          style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}
-                          title="Ver posición del sol en SunCalc">
-                          ☀️ SunCalc
-                        </a>
-                      ) : null;
-                    })()}
+                    {loc.suncalcUrl && (
+                      <a href={loc.suncalcUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80"
+                        style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}
+                        title="Ver posición del sol en SunCalc">
+                        ☀️ SunCalc
+                      </a>
+                    )}
                     {(() => {
                       const weatherUrl = buildWeatherUrl(city, country);
                       return weatherUrl ? (
@@ -1346,10 +1341,11 @@ function ResumeView({ projects, onSelect, onNewProject }) {
             <div className="text-center py-12 text-sm" style={{ color: C.textLight }}>No hay proyectos que coincidan.</div>
           )}
           {filtered.map(p => {
-            const chosen = p.chosenOption ? p.options[p.chosenOption] : null;
-            const oc     = p.chosenOption ? OPTION_COLORS[p.chosenOption] : null;
-            const cpm    = chosen && p.sqm ? chosen.total / p.sqm : null;
-            const primaryLoc = p.locations?.[0];
+            const chosen   = p.chosenOption ? p.options[p.chosenOption] : null;
+            const expenses = chosen ? chosen.subtotal : null;
+            const fee      = p.photoFee ? Number(p.photoFee) : null;
+            const total    = chosen ? chosen.total : null;
+            const feePerSqm = fee && p.sqm ? fee / p.sqm : null;
             return (
               <button key={p.id} onClick={() => onSelect(p)}
                 className="w-full text-left rounded-xl px-5 py-4 flex items-center gap-4 hover:shadow-md transition-shadow"
@@ -1360,11 +1356,6 @@ function ResumeView({ projects, onSelect, onNewProject }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm" style={{ color: C.textDark }}>{p.ref}</span>
                     <StatusBadge status={p.status} />
-                    {p.chosenOption && (
-                      <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white" style={{ background: oc.badge }}>
-                        Op. {p.chosenOption}
-                      </span>
-                    )}
                   </div>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
@@ -1389,11 +1380,27 @@ function ResumeView({ projects, onSelect, onNewProject }) {
                       </span>
                     )}
                   </div>
+                  {/* Fee + gastos en línea secundaria */}
+                  {(fee || expenses) && (
+                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                      {fee && (
+                        <span className="text-xs font-semibold flex items-center gap-1"
+                          style={{ color: C.navy }}>
+                          📷 {fmt(fee)}
+                          {feePerSqm && <span className="font-normal" style={{ color: C.textLight }}>· {fmtD(feePerSqm)}/m²</span>}
+                        </span>
+                      )}
+                      {expenses && (
+                        <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                          ✈️ {fmt(expenses)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right flex-shrink-0">
-                  {chosen
-                    ? <><div className="font-bold text-base" style={{ color: C.green }}>{fmt(chosen.total)}</div>
-                        {cpm && <div className="text-xs" style={{ color: C.textLight }}>{fmtD(cpm)}/m²</div>}</>
+                  {total
+                    ? <div className="font-bold text-base" style={{ color: C.green }}>{fmt(total)}</div>
                     : <div className="text-sm" style={{ color: C.textLight }}>Sin opción</div>}
                 </div>
                 <ChevronRight size={16} style={{ color: C.textLight }} className="flex-shrink-0" />
@@ -1530,6 +1537,24 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                 : <div className="text-sm font-semibold" style={{ color: C.textDark }}>{project[key]}{suffix || ""}</div>}
             </div>
           ))}
+
+          {/* Fee fotografía */}
+          <div>
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>
+              📷 Fee fotografía (€)
+            </div>
+            {editing
+              ? <input type="number" value={draft.photoFee || ""} onChange={e => setD("photoFee", e.target.value ? Number(e.target.value) : "")}
+                  className={inputCl} style={inputSt} placeholder="0" />
+              : <div className="text-sm font-semibold" style={{ color: C.navy }}>
+                  {project.photoFee ? fmt(project.photoFee) : <span style={{ color: C.textLight }}>—</span>}
+                  {project.photoFee && project.sqm
+                    ? <span className="text-xs font-normal ml-2" style={{ color: C.textLight }}>
+                        {fmtD(project.photoFee / project.sqm)}/m²
+                      </span>
+                    : null}
+                </div>}
+          </div>
 
           {/* Start date with calendar picker */}
           <div>
@@ -1800,7 +1825,8 @@ function NewProjectView({ onBack, onCreate }) {
             </div>
             {[["Marca","brand","CKO, TH..."],["Cliente","client","Tommy Hilfiger..."],
               ["Ciudad","city","París"],["País","country","Francia"],
-              ["Superficie (m²)","sqm","350"],["Duración (h)","duration","8"]].map(([label, key, ph]) => (
+              ["Superficie (m²)","sqm","350"],["Duración (h)","duration","8"],
+              ["Fee fotografía (€)","photoFee","1200"]].map(([label, key, ph]) => (
               <div key={key}>
                 <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>{label}</label>
                 <input value={form[key] || ""} onChange={e => setF(key, e.target.value)} placeholder={ph} style={inputSt} className={inputCl} />
