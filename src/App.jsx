@@ -680,27 +680,27 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
 
   return (
     <tr style={{ borderTop: `1px solid ${C.border}`, background: rowBg }}>
-      <td className="py-2.5 pr-2 w-5">
+      <td className="py-1.5 pr-1 w-4">
         <PayDot status={row.payStatus} onChange={onChange} />
       </td>
-      <td className="py-2.5 pr-3 w-6">
-        <Icon size={14} style={{ color: C.textLight }} />
+      <td className="py-1.5 pr-2 w-5">
+        <Icon size={13} style={{ color: C.textLight }} />
       </td>
-      <td className="py-2.5 pr-3 font-medium text-sm" style={{ color: C.textDark }}>{row.desc}</td>
-      <td className="py-2.5 pr-3">
+      <td className="py-1.5 pr-2 font-medium text-xs" style={{ color: C.textDark }}>{row.desc}</td>
+      <td className="py-1.5 pr-2 w-6 text-center">
         {row.url
-          ? <a href={row.url} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs hover:underline" style={{ color: "#2563eb" }}>
-              <ExternalLink size={11} /> Enlace
+          ? <a href={row.url} target="_blank" rel="noopener noreferrer" title={row.url}
+              style={{ color: "#2563eb" }}>
+              <ExternalLink size={11} />
             </a>
           : <span style={{ color: C.textLight }}>—</span>}
       </td>
-      <td className="py-2.5 pr-3 text-xs" style={{ color: C.textMid }}>{fmtDate(row.date)}</td>
-      <td className="py-2.5 pr-3 text-xs whitespace-nowrap" style={{ color: C.textMid }}>{row.time || "—"}</td>
-      <td className="py-2.5 pr-3 text-xs" style={{ color: C.textMid }}>{row.provider || "—"}</td>
-      <td className="py-2.5 pr-3 text-xs" style={{ color: C.textMid }}>{row.tarifa || "—"}</td>
+      <td className="py-1.5 pr-2 text-xs whitespace-nowrap" style={{ color: C.textMid }}>{fmtDate(row.date)}</td>
+      <td className="py-1.5 pr-2 text-xs whitespace-nowrap" style={{ color: C.textMid }}>{row.time || "—"}</td>
+      <td className="py-1.5 pr-2 text-xs" style={{ color: C.textMid, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.provider || "—"}</td>
+      <td className="py-1.5 pr-2 text-xs w-14" style={{ color: C.textMid }}>{row.tarifa || "—"}</td>
       {optKeys.map(o => (
-        <td key={o} className="py-2.5 pr-1 text-right text-sm font-semibold"
+        <td key={o} className="py-1.5 pr-1 text-right text-xs font-semibold w-14"
           style={{ color: row[optKey(o)] != null ? (o === activeOpt ? C.green : C.textDark) : C.textLight }}>
           {row[optKey(o)] != null ? fmt(row[optKey(o)]) : "—"}
         </td>
