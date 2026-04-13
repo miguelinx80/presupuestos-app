@@ -280,59 +280,53 @@ const fmtD = (n) => n != null ? `€${Number(n).toLocaleString("es-ES", { minimu
 const optKey = (o) => `opt${o}`;
 const newLocId = () => Date.now() + Math.random();
 
-// ─── NOTION SYNC ─────────────────────────────────────────────────────────────
+// ─── SUPABASE SYNC ───────────────────────────────────────────────────────────
 
-const CACHE_KEY = "presupuestos_notion_cache";
+const CACHE_KEY = "presupuestos_sb_cache";
 
 function useProjects() {
   const [projects, setProjectsRaw] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null") || []; }
-    catch { return []; }
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null") || INITIAL_PROJECTS; }
+    catch { return INITIAL_PROJECTS; }
   });
-  const [loading, setLoading]  = useState(true);
-  const [syncErr, setSyncErr]  = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [syncErr, setSyncErr] = useState(null);
 
-  // Write-through helper
   const persist = (list) => {
     setProjectsRaw(list);
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch {}
   };
 
-  // Fetch from Notion on mount
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/notion")
+    fetch("/api/supabase")
       .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error)))
-      .then(data => {
-        if (!cancelled) { persist(data); setSyncErr(null); }
-      })
-      .catch(err => {
-        if (!cancelled) setSyncErr(String(err));
-      })
+      .then(data => { if (!cancelled) { persist(data); setSyncErr(null); } })
+      .catch(err => { if (!cancelled) setSyncErr(String(err)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
   const post = (body) =>
-    fetch("/api/notion", {
+    fetch("/api/supabase", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error)));
 
   const save = async (updated) => {
-    // Optimistic update
     persist(projects.map(p => p.id === updated.id ? updated : p));
     try {
       const fresh = await post({ action: "update", id: updated.id, project: updated });
-      persist(projects.map(p => p.id === updated.id ? fresh : p));
+      persist(projects.map(p => p.id === updated.id ? { ...fresh, id: updated.id } : p));
     } catch (e) { setSyncErr(String(e)); }
   };
 
   const create = async (project) => {
     try {
       const fresh = await post({ action: "create", project });
-      persist([fresh, ...projects]);
+      const list = [fresh, ...projects];
+      persist(list);
       return fresh;
     } catch (e) { setSyncErr(String(e)); return null; }
   };
@@ -2080,13 +2074,12 @@ export default function App() {
     if (fresh) { setSelectedId(fresh.id); setView("detail"); }
   };
 
-  // Show spinner only on first load with empty cache
   if (loading && projects.length === 0) {
     return (
-      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-        <div style={{ width: 48, height: 48, border: `4px solid ${C.border}`, borderTopColor: C.navy, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-        <p style={{ color: C.textMid, fontFamily: "sans-serif" }}>Cargando proyectos…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
+        <div style={{ width:48, height:48, border:`4px solid ${C.border}`, borderTopColor:C.navy, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+        <p style={{ color:C.textMid, fontFamily:"sans-serif" }}>Cargando proyectos…</p>
+        <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -2094,8 +2087,8 @@ export default function App() {
   return (
     <>
       {syncErr && (
-        <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 9999, background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 16px", color: "#991b1b", fontFamily: "sans-serif", fontSize: 13, maxWidth: 320 }}>
-          ⚠️ Error de sincronización: {syncErr}
+        <div style={{ position:"fixed", bottom:16, right:16, zIndex:9999, background:"#fee2e2", border:"1px solid #fca5a5", borderRadius:8, padding:"10px 16px", color:"#991b1b", fontFamily:"sans-serif", fontSize:13, maxWidth:320 }}>
+          ⚠️ Sin conexión con Supabase — trabajando en local
         </div>
       )}
       {view === "detail" && selected
