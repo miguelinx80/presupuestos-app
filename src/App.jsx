@@ -1121,7 +1121,7 @@ function QuoteModal({ project, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-6 px-4"
       style={{ background:"rgba(0,0,0,0.5)" }}>
-      <div className="w-full max-w-3xl rounded-2xl shadow-2xl" style={{ background: C.card }}>
+      <div className="w-full max-w-4xl rounded-2xl shadow-2xl" style={{ background: C.card }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: C.border }}>
           <h2 className="font-bold text-base" style={{ color: C.textDark }}>📄 Generar presupuesto</h2>
@@ -1317,7 +1317,7 @@ function ResumeView({ projects, onSelect, onNewProject }) {
   return (
     <div className="min-h-screen" style={{ background: C.bg }}>
       <div style={{ background: C.navy }} className="px-6 pt-8 pb-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">📊 Presupuestos</h1>
@@ -1338,7 +1338,7 @@ function ResumeView({ projects, onSelect, onNewProject }) {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {chartData.length > 0 && (
           <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: C.textDark }}>Volumen por año</h2>
@@ -1519,7 +1519,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
   return (
     <div className="min-h-screen" style={{ background: C.bg }}>
       <div style={{ background: `linear-gradient(135deg, ${C.navyDark} 0%, ${C.navyLight} 100%)` }} className="px-6 pt-6 pb-8">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white">
               <ArrowLeft size={16} /> Volver
@@ -1584,7 +1584,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
 
         {/* Metadata */}
         <div className="rounded-xl p-5 grid grid-cols-2 sm:grid-cols-3 gap-4"
@@ -1874,13 +1874,13 @@ function NewProjectView({ onBack, onCreate }) {
   return (
     <div className="min-h-screen" style={{ background: C.bg }}>
       <div style={{ background: C.navy }} className="px-6 py-5">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
           <button onClick={onBack} className="text-white/70 hover:text-white"><ArrowLeft size={18} /></button>
           <h2 className="text-lg font-bold text-white">Nuevo proyecto</h2>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-4 py-6 space-y-5">
         {/* Info general */}
         <div className="rounded-xl p-5 space-y-4" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <h3 className="text-sm font-semibold" style={{ color: C.textDark }}>Información general</h3>
