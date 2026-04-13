@@ -1476,16 +1476,31 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
   const initExpOpts = () => { const u = usedExpOpts(initial.expenses); return u.length ? u : ["A"]; };
   const [visibleExpOpts, setVisibleExpOpts] = useState(initExpOpts);
 
-  const optKeys    = Object.keys(project.options);
+  const optKeys    = ALL_OPTS.filter(o => computedOpts[o]);
   const chosenData = project.options[activeOpt];
   const cpm        = chosenData && project.sqm ? chosenData.total / project.sqm : null;
 
-  const computedSubtotal = useMemo(() =>
-    (editing ? draft : project).expenses.reduce((s, e) => s + (e[optKey(activeOpt)] || 0), 0),
-    [editing, draft, project, activeOpt]
-  );
+  // Compute totals dynamically from expenses for ALL options
+  const computedOpts = useMemo(() => {
+    const exps = (editing ? draft : project).expenses;
+    const result = {};
+    ALL_OPTS.forEach(opt => {
+      const sub = Math.round(exps.reduce((s, e) => s + (Number(e[optKey(opt)]) || 0), 0) * 100) / 100;
+      if (sub > 0) result[opt] = { subtotal: sub, total: Math.round(sub * 1.2 * 100) / 100 };
+    });
+    // Keep any options with stored values but zero expenses (e.g. manually set)
+    Object.entries((editing ? draft : project).options).forEach(([opt, val]) => {
+      if (!result[opt]) result[opt] = val;
+    });
+    return result;
+  }, [editing, draft, project]);
 
-  const handleSave = () => { setProject(draft); onSave(draft); setEditing(false); };
+  const computedSubtotal = computedOpts[activeOpt]?.subtotal || 0;
+
+  const handleSave = () => {
+    const withOpts = { ...draft, options: computedOpts };
+    setProject(withOpts); onSave(withOpts); setEditing(false);
+  };
   const setD = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
   const updateRow = (id, field, val) => setDraft(d => ({ ...d, expenses: d.expenses.map(e => e.id === id ? { ...e, [field]: val } : e) }));
@@ -1696,8 +1711,8 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                   style={{ background: isActive ? oc.bg : "#f8fafc", border: `2px solid ${isActive ? oc.border : C.border}` }}>
                   <div className="font-bold text-sm" style={{ color: isActive ? oc.text : C.textMid }}>Opción {opt}</div>
                   <div className="font-bold text-lg mt-0.5" style={{ color: isActive ? oc.text : C.textDark }}>
-                    {fmt(project.options[opt].total)}</div>
-                  <div className="text-xs mt-0.5" style={{ color: C.textLight }}>Sub: {fmt(project.options[opt].subtotal)}</div>
+                    {fmt(computedOpts[opt]?.total)}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.textLight }}>Sub: {fmt(computedOpts[opt]?.subtotal)}</div>
                   {isChosen && <div className="text-xs font-bold mt-1 rounded px-1 py-0.5 inline-block text-white"
                     style={{ background: oc.badge }}>✓ Elegida</div>}
                 </button>
