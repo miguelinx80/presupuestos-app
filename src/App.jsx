@@ -593,14 +593,37 @@ function usedExpOpts(expenses = []) {
 }
 
 // ─── EXPENSE ROW ─────────────────────────────────────────────────────────────
+const PAY_CYCLE = { null: "paid", paid: "alert", alert: null };
+const PAY_STYLE = {
+  paid:  { bg: "#f0fdf4", dot: "#16a34a", title: "Pagado" },
+  alert: { bg: "#fff7f7", dot: "#dc2626", title: "Pendiente de pagar" },
+};
+
+function PayDot({ status, onChange }) {
+  const s = PAY_STYLE[status];
+  return (
+    <button type="button" title={s?.title || "Marcar estado"}
+      onClick={() => onChange("payStatus", PAY_CYCLE[status] ?? null)}
+      style={{
+        width: 11, height: 11, borderRadius: "50%", flexShrink: 0,
+        background: s ? s.dot : "transparent",
+        border: `2px solid ${s ? s.dot : "#cbd5e1"}`,
+        cursor: "pointer", display: "inline-block",
+      }} />
+  );
+}
+
 function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
   const Icon = getCatIcon(row.desc);
-  // En edición mostramos siempre A·B·C·D; en lectura solo las opciones del proyecto
   const editOpts = editing ? ALL_OPTS : optKeys;
+  const rowBg = PAY_STYLE[row.payStatus]?.bg;
 
   if (editing) {
     return (
-      <tr style={{ borderTop: `1px solid ${C.border}` }}>
+      <tr style={{ borderTop: `1px solid ${C.border}`, background: rowBg }}>
+        <td className="py-2 pr-1">
+          <PayDot status={row.payStatus} onChange={onChange} />
+        </td>
         <td className="py-2 pr-2">
           <button type="button" onClick={onDelete} className="text-red-400 hover:text-red-600">
             <X size={14} />
@@ -656,8 +679,11 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
   }
 
   return (
-    <tr style={{ borderTop: `1px solid ${C.border}` }}>
-      <td className="py-2.5 pr-3 w-7">
+    <tr style={{ borderTop: `1px solid ${C.border}`, background: rowBg }}>
+      <td className="py-2.5 pr-2 w-5">
+        <PayDot status={row.payStatus} onChange={onChange} />
+      </td>
+      <td className="py-2.5 pr-3 w-6">
         <Icon size={14} style={{ color: C.textLight }} />
       </td>
       <td className="py-2.5 pr-3 font-medium text-sm" style={{ color: C.textDark }}>{row.desc}</td>
@@ -1785,8 +1811,9 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
               <table className="w-full text-sm" style={{ minWidth: editing ? 800 + visibleExpOpts.length * 80 : 680 }}>
                 <thead>
                   <tr>
+                    <th className="w-5" />
                     {editing && <th className="w-7" />}
-                    <th className="w-7" />
+                    <th className="w-6" />
                     {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map(h => (
                       <th key={h} className="text-left pb-2 font-medium text-xs pr-3" style={{ color: C.textLight }}>{h}</th>
                     ))}
@@ -1810,7 +1837,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `2px solid ${C.border}` }}>
-                    <td colSpan={editing ? 8 : 7} className="pt-2.5 font-semibold text-sm" style={{ color: C.textDark }}>
+                    <td colSpan={editing ? 9 : 8} className="pt-2.5 font-semibold text-sm" style={{ color: C.textDark }}>
                       Subtotal (Op. {activeOpt})
                     </td>
                     <td colSpan={(editing ? visibleExpOpts : optKeys).length} className="pt-2.5 text-right font-bold" style={{ color: C.textDark }}>
