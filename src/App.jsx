@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Building2, Search, Plus, ChevronRight, ArrowLeft, MapPin, User,
@@ -280,17 +280,70 @@ const fmtD = (n) => n != null ? `€${Number(n).toLocaleString("es-ES", { minimu
 const optKey = (o) => `opt${o}`;
 const newLocId = () => Date.now() + Math.random();
 
-function useLocalStorage(key, initial) {
-  const [val, setVal] = useState(() => {
-    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : initial; }
-    catch { return initial; }
+// ─── NOTION SYNC ─────────────────────────────────────────────────────────────
+
+const CACHE_KEY = "presupuestos_notion_cache";
+
+function useProjects() {
+  const [projects, setProjectsRaw] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null") || []; }
+    catch { return []; }
   });
-  const set = (v) => {
-    const next = typeof v === "function" ? v(val) : v;
-    setVal(next);
-    try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+  const [loading, setLoading]  = useState(true);
+  const [syncErr, setSyncErr]  = useState(null);
+
+  // Write-through helper
+  const persist = (list) => {
+    setProjectsRaw(list);
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch {}
   };
-  return [val, set];
+
+  // Fetch from Notion on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/notion")
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error)))
+      .then(data => {
+        if (!cancelled) { persist(data); setSyncErr(null); }
+      })
+      .catch(err => {
+        if (!cancelled) setSyncErr(String(err));
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const post = (body) =>
+    fetch("/api/notion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error)));
+
+  const save = async (updated) => {
+    // Optimistic update
+    persist(projects.map(p => p.id === updated.id ? updated : p));
+    try {
+      const fresh = await post({ action: "update", id: updated.id, project: updated });
+      persist(projects.map(p => p.id === updated.id ? fresh : p));
+    } catch (e) { setSyncErr(String(e)); }
+  };
+
+  const create = async (project) => {
+    try {
+      const fresh = await post({ action: "create", project });
+      persist([fresh, ...projects]);
+      return fresh;
+    } catch (e) { setSyncErr(String(e)); return null; }
+  };
+
+  const remove = async (id) => {
+    persist(projects.filter(p => p.id !== id));
+    try { await post({ action: "delete", id }); }
+    catch (e) { setSyncErr(String(e)); }
+  };
+
+  return { projects, loading, syncErr, save, create, remove };
 }
 
 // ─── MY INFO ─────────────────────────────────────────────────────────────────
@@ -1993,31 +2046,64 @@ function NewProjectView({ onBack, onCreate }) {
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [projects, setProjects] = useLocalStorage("presupuestos_v4", INITIAL_PROJECTS);
-  const [view, setView]         = useState("list");
+  const { projects, loading, syncErr, save, create, remove } = useProjects();
+  const [view, setView]             = useState("list");
   const [selectedId, setSelectedId] = useState(null);
 
   const selected = projects.find(p => p.id === selectedId);
 
-  const handleSelect    = (p)  => { setSelectedId(p.id); setView("detail"); };
-  const handleSave      = (u)  => setProjects(prev => prev.map(p => p.id === u.id ? u : p));
-  const handleDelete    = (id) => { setProjects(prev => prev.filter(p => p.id !== id)); setView("list"); };
-  const handleCreate    = (p)  => { setProjects(prev => [p, ...prev]); setView("list"); };
-  const handleDuplicate = (p)  => {
+  const handleSelect = (p) => { setSelectedId(p.id); setView("detail"); };
+
+  const handleSave = async (updated) => {
+    await save(updated);
+  };
+
+  const handleDelete = async (id) => {
+    await remove(id);
+    setView("list");
+  };
+
+  const handleCreate = async (project) => {
+    const fresh = await create(project);
+    if (fresh) setView("list");
+  };
+
+  const handleDuplicate = async (p) => {
     const dup = {
       ...JSON.parse(JSON.stringify(p)),
-      id: Date.now(),
       ref: p.ref + " (copia)",
       status: "Pendiente",
       chosenOption: null,
     };
-    setProjects(prev => [dup, ...prev]);
-    setSelectedId(dup.id);
+    delete dup.id; // Notion will assign a new UUID
+    const fresh = await create(dup);
+    if (fresh) { setSelectedId(fresh.id); setView("detail"); }
   };
 
-  if (view === "detail" && selected)
-    return <DetailView project={selected} onBack={() => setView("list")} onSave={handleSave} onDelete={handleDelete} onDuplicate={handleDuplicate} />;
-  if (view === "new")
-    return <NewProjectView onBack={() => setView("list")} onCreate={handleCreate} />;
-  return <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} />;
+  // Show spinner only on first load with empty cache
+  if (loading && projects.length === 0) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <div style={{ width: 48, height: 48, border: `4px solid ${C.border}`, borderTopColor: C.navy, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <p style={{ color: C.textMid, fontFamily: "sans-serif" }}>Cargando proyectos…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {syncErr && (
+        <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 9999, background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 16px", color: "#991b1b", fontFamily: "sans-serif", fontSize: 13, maxWidth: 320 }}>
+          ⚠️ Error de sincronización: {syncErr}
+        </div>
+      )}
+      {view === "detail" && selected
+        ? <DetailView project={selected} onBack={() => setView("list")} onSave={handleSave} onDelete={handleDelete} onDuplicate={handleDuplicate} />
+        : view === "new"
+        ? <NewProjectView onBack={() => setView("list")} onCreate={handleCreate} />
+        : <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} />
+      }
+    </>
+  );
 }
