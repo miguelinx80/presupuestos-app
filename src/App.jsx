@@ -1476,25 +1476,25 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
   const initExpOpts = () => { const u = usedExpOpts(initial.expenses); return u.length ? u : ["A"]; };
   const [visibleExpOpts, setVisibleExpOpts] = useState(initExpOpts);
 
-  const optKeys    = ALL_OPTS.filter(o => computedOpts[o]);
-  const chosenData = project.options[activeOpt];
-  const cpm        = chosenData && project.sqm ? chosenData.total / project.sqm : null;
-
-  // Compute totals dynamically from expenses for ALL options
+  // Compute totals dynamically from expenses for ALL options — must be before optKeys
   const computedOpts = useMemo(() => {
-    const exps = (editing ? draft : project).expenses;
+    const src  = editing ? draft : project;
+    const exps = src.expenses || [];
     const result = {};
     ALL_OPTS.forEach(opt => {
       const sub = Math.round(exps.reduce((s, e) => s + (Number(e[optKey(opt)]) || 0), 0) * 100) / 100;
       if (sub > 0) result[opt] = { subtotal: sub, total: Math.round(sub * 1.2 * 100) / 100 };
     });
-    // Keep any options with stored values but zero expenses (e.g. manually set)
-    Object.entries((editing ? draft : project).options).forEach(([opt, val]) => {
+    // Keep stored options that have no expenses (e.g. manually set totals)
+    Object.entries(src.options || {}).forEach(([opt, val]) => {
       if (!result[opt]) result[opt] = val;
     });
     return result;
   }, [editing, draft, project]);
 
+  const optKeys    = ALL_OPTS.filter(o => computedOpts[o]);
+  const chosenData = computedOpts[activeOpt];
+  const cpm        = chosenData && project.sqm ? chosenData.total / project.sqm : null;
   const computedSubtotal = computedOpts[activeOpt]?.subtotal || 0;
 
   const handleSave = () => {
