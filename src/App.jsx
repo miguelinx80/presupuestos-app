@@ -292,9 +292,13 @@ function useProjects() {
   const [loading, setLoading] = useState(true);
   const [syncErr, setSyncErr] = useState(null);
 
+  const byDate = (list) =>
+    [...list].sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+
   const persist = (list) => {
-    setProjectsRaw(list);
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch {}
+    const sorted = byDate(list);
+    setProjectsRaw(sorted);
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(sorted)); } catch {}
   };
 
   useEffect(() => {
