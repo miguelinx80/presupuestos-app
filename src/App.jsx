@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Building2, Search, Plus, ChevronRight, ArrowLeft, MapPin, User,
   Calendar, Ruler, TrendingUp, CheckCircle2, Clock, XCircle,
   Euro, Edit3, Trash2, Save, X, Plane, Car, Hotel,
   Utensils, Bus, ExternalLink, ChevronDown, ChevronUp, Navigation, FileText,
-  Copy, CloudSun, ClipboardCheck, Check
+  Copy, CloudSun, ClipboardCheck, Check, GripVertical
 } from "lucide-react";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -613,14 +613,22 @@ function PayDot({ status, onChange }) {
   );
 }
 
-function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete }) {
+function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete, dragHandlers }) {
   const Icon = getCatIcon(row.desc);
   const editOpts = editing ? ALL_OPTS : optKeys;
   const rowBg = PAY_STYLE[row.payStatus]?.bg;
 
   if (editing) {
     return (
-      <tr style={{ borderTop: `1px solid ${C.border}`, background: rowBg }}>
+      <tr style={{ borderTop: `1px solid ${C.border}`, background: rowBg, opacity: dragHandlers?.isDragging ? 0.4 : 1 }}
+        draggable
+        onDragStart={dragHandlers?.onDragStart}
+        onDragOver={dragHandlers?.onDragOver}
+        onDrop={dragHandlers?.onDrop}
+        onDragEnd={dragHandlers?.onDragEnd}>
+        <td className="py-2 pr-1 cursor-grab" style={{ color: C.textLight }}>
+          <GripVertical size={14} />
+        </td>
         <td className="py-2 pr-1">
           <PayDot status={row.payStatus} onChange={onChange} />
         </td>
@@ -1523,6 +1531,18 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
   const cpm        = chosenData && project.sqm ? chosenData.total / project.sqm : null;
   const computedSubtotal = computedOpts[activeOpt]?.subtotal || 0;
 
+  // Drag-to-reorder state
+  const dragIdx = useRef(null);
+  const reorderExpenses = (fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return;
+    setDraft(d => {
+      const exps = [...d.expenses];
+      const [moved] = exps.splice(fromIdx, 1);
+      exps.splice(toIdx, 0, moved);
+      return { ...d, expenses: exps };
+    });
+  };
+
   const handleSave = () => {
     const withOpts = { ...draft, options: computedOpts };
     setProject(withOpts); onSave(withOpts); setEditing(false);
@@ -1812,6 +1832,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                 <thead>
                   <tr>
                     <th className="w-5" />
+                    {editing && <th className="w-4" />}{/* drag handle */}
                     {editing && <th className="w-7" />}
                     <th className="w-6" />
                     {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map(h => (
@@ -1826,18 +1847,25 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                   </tr>
                 </thead>
                 <tbody>
-                  {p.expenses.map(row => (
+                  {p.expenses.map((row, idx) => (
                     <ExpenseRow key={row.id} row={row}
                       optKeys={editing ? visibleExpOpts : usedExpOpts(project.expenses).length ? usedExpOpts(project.expenses) : optKeys}
                       activeOpt={activeOpt}
                       editing={editing}
                       onChange={(field, val) => updateRow(row.id, field, val)}
-                      onDelete={() => deleteRow(row.id)} />
+                      onDelete={() => deleteRow(row.id)}
+                      dragHandlers={editing ? {
+                        isDragging: dragIdx.current === idx,
+                        onDragStart: () => { dragIdx.current = idx; },
+                        onDragOver:  (e) => { e.preventDefault(); },
+                        onDrop:      () => { reorderExpenses(dragIdx.current, idx); dragIdx.current = null; },
+                        onDragEnd:   () => { dragIdx.current = null; },
+                      } : null} />
                   ))}
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `2px solid ${C.border}` }}>
-                    <td colSpan={editing ? 9 : 8} className="pt-2.5 font-semibold text-sm" style={{ color: C.textDark }}>
+                    <td colSpan={editing ? 10 : 8} className="pt-2.5 font-semibold text-sm" style={{ color: C.textDark }}>
                       Subtotal (Op. {activeOpt})
                     </td>
                     <td colSpan={(editing ? visibleExpOpts : optKeys).length} className="pt-2.5 text-right font-bold" style={{ color: C.textDark }}>
@@ -1845,7 +1873,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan={editing ? 8 : 7} className="pt-1 font-bold text-sm" style={{ color: C.green }}>
+                    <td colSpan={editing ? 10 : 8} className="pt-1 font-bold text-sm" style={{ color: C.green }}>
                       Total (+20% gastos finales)
                     </td>
                     <td colSpan={(editing ? visibleExpOpts : optKeys).length} className="pt-1 text-right font-bold text-base" style={{ color: C.green }}>
