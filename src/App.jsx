@@ -1831,10 +1831,18 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
               <table className="w-full text-sm" style={{ minWidth: editing ? 800 + visibleExpOpts.length * 80 : 680 }}>
                 <thead>
                   <tr>
-                    <th className="w-5" />
-                    {editing && <th className="w-4" />}{/* drag handle */}
-                    {editing && <th className="w-7" />}
-                    <th className="w-6" />
+                    {editing ? (
+                      <>
+                        <th className="w-4" />{/* drag */}
+                        <th className="w-5" />{/* paydot */}
+                        <th className="w-7" />{/* delete */}
+                      </>
+                    ) : (
+                      <>
+                        <th className="w-5" />{/* paydot */}
+                        <th className="w-6" />{/* icon */}
+                      </>
+                    )}
                     {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map(h => (
                       <th key={h} className="text-left pb-2 font-medium text-xs pr-3" style={{ color: C.textLight }}>{h}</th>
                     ))}
