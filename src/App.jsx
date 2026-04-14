@@ -508,7 +508,7 @@ function LocationsSection({ locations = [], editing, onChange, city = "", countr
                       </a>
                     )}
                     {(() => {
-                      const weatherUrl = buildWeatherUrl(city, country);
+                      const weatherUrl = buildWeatherUrl(loc.name, "");
                       return weatherUrl ? (
                         <a href={weatherUrl} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80"
