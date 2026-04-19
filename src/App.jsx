@@ -5,7 +5,7 @@ import {
   Calendar, Ruler, TrendingUp, CheckCircle2, Clock, XCircle,
   Euro, Edit3, Trash2, Save, X, Plane, Car, Hotel,
   Utensils, Bus, ExternalLink, ChevronDown, ChevronUp, Navigation, FileText,
-  Copy, CloudSun, ClipboardCheck, Check, GripVertical
+  Copy, CloudSun, ClipboardCheck, Check, GripVertical, AlertTriangle
 } from "lucide-react";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -1319,12 +1319,13 @@ function QuoteModal({ project, onClose }) {
 }
 
 // ─── RESUMEN VIEW ─────────────────────────────────────────────────────────────
-function ResumeView({ projects, onSelect, onNewProject }) {
+function ResumeView({ projects, onSelect, onNewProject, onGoToPending }) {
   const [search, setSearch]             = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterYear, setFilterYear]     = useState("Todos");
 
   const years = useMemo(() => [...new Set(projects.map(p => p.year))].sort(), [projects]);
+  const pendingPayCount = useMemo(() => projects.reduce((s, p) => s + (p.expenses || []).filter(e => e.payStatus === "alert").length, 0), [projects]);
 
   const filtered = useMemo(() => projects.filter(p => {
     const q = search.toLowerCase();
@@ -1352,7 +1353,7 @@ function ResumeView({ projects, onSelect, onNewProject }) {
     <div className="min-h-screen" style={{ background: C.bg }}>
       <div style={{ background: C.navy }} className="px-6 pt-8 pb-6">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-5">
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">📊 Presupuestos</h1>
               <p className="text-sm mt-0.5" style={{ color: "#94a3b8" }}>{projects.length} proyectos · {years.join(", ")}</p>
@@ -1361,6 +1362,23 @@ function ResumeView({ projects, onSelect, onNewProject }) {
               className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90"
               style={{ background: C.gold, color: C.navy }}>
               <Plus size={16} /> Nuevo proyecto
+            </button>
+          </div>
+          {/* Nav tabs */}
+          <div className="flex gap-1 mb-5">
+            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
+              style={{ background: "rgba(255,255,255,0.15)" }}>
+              Proyectos
+            </button>
+            <button onClick={onGoToPending}
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
+              Pendientes de pago
+              {pendingPayCount > 0 && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: "#dc2626", color: "#fff" }}>
+                  {pendingPayCount}
+                </span>
+              )}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -1421,77 +1439,103 @@ function ResumeView({ projects, onSelect, onNewProject }) {
           </select>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           {filtered.length === 0 && (
             <div className="text-center py-12 text-sm" style={{ color: C.textLight }}>No hay proyectos que coincidan.</div>
           )}
-          {filtered.map(p => {
-            const chosen   = p.chosenOption ? p.options[p.chosenOption] : null;
-            const expenses = chosen ? chosen.subtotal : null;
-            const fee      = p.photoFee ? Number(p.photoFee) : null;
-            const total    = chosen ? chosen.total : null;
-            const feePerSqm = fee && p.sqm ? fee / p.sqm : null;
-            return (
-              <button key={p.id} onClick={() => onSelect(p)}
-                className="w-full text-left rounded-xl px-5 py-4 flex items-center gap-4 hover:shadow-md transition-shadow"
-                style={{ background: C.card, border: `1px solid ${C.border}` }}>
-                <div className="hidden sm:flex w-12 h-12 rounded-lg items-center justify-center font-bold text-sm flex-shrink-0"
-                  style={{ background: C.navy + "12", color: C.navy }}>{p.brand}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm" style={{ color: C.textDark }}>{p.ref}</span>
-                    <StatusBadge status={p.status} />
+          {(() => {
+            // Group projects by year for display
+            const yearGroups = [];
+            let lastYear = null;
+            filtered.forEach(p => {
+              if (p.year !== lastYear) { yearGroups.push({ year: p.year, projects: [] }); lastYear = p.year; }
+              yearGroups[yearGroups.length - 1].projects.push(p);
+            });
+            return yearGroups.map(({ year, projects: grp }) => (
+              <div key={year}>
+                {filterYear === "Todos" && (
+                  <div className="flex items-center gap-3 pt-3 pb-2 px-1">
+                    <span className="text-xs font-bold tracking-widest uppercase" style={{ color: C.textLight }}>{year}</span>
+                    <div className="flex-1 h-px" style={{ background: C.border }} />
                   </div>
-                  <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                      <MapPin size={10} />{p.city}, {p.country}
-                    </span>
-                    <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                      <User size={10} />{p.client}
-                    </span>
-                    {p.sqm && (
-                      <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                        <Ruler size={10} />{p.sqm} m²
-                      </span>
-                    )}
-                    {p.startDate && (
-                      <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                        <Calendar size={10} />{fmtDate(p.startDate)}{p.duration ? ` · ${p.duration}h` : ""}
-                      </span>
-                    )}
-                    {p.locations?.length > 0 && (
-                      <span className="text-xs flex items-center gap-1" style={{ color: "#2563eb" }}>
-                        <Navigation size={10} />{p.locations.length} ubicación{p.locations.length > 1 ? "es" : ""}
-                      </span>
-                    )}
-                  </div>
-                  {/* Fee + gastos en línea secundaria */}
-                  {(fee || expenses) && (
-                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                      {fee && (
-                        <span className="text-xs font-semibold flex items-center gap-1"
-                          style={{ color: C.navy }}>
-                          📷 {fmt(fee)}
-                          {feePerSqm && <span className="font-normal" style={{ color: C.textLight }}>· {fmtD(feePerSqm)}/m²</span>}
-                        </span>
-                      )}
-                      {expenses && (
-                        <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                          ✈️ {fmt(expenses)}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                )}
+                <div className="space-y-2">
+                  {grp.map(p => {
+                    const chosen   = p.chosenOption ? p.options[p.chosenOption] : null;
+                    const expenses = chosen ? chosen.subtotal : null;
+                    const fee      = p.photoFee ? Number(p.photoFee) : null;
+                    const total    = chosen ? chosen.total : null;
+                    const feePerSqm = fee && p.sqm ? fee / p.sqm : null;
+                    const alertCount = (p.expenses || []).filter(e => e.payStatus === "alert").length;
+                    return (
+                      <button key={p.id} onClick={() => onSelect(p)}
+                        className="w-full text-left rounded-xl px-5 py-4 flex items-center gap-4 hover:shadow-md transition-shadow"
+                        style={{ background: C.card, border: `1px solid ${C.border}` }}>
+                        <div className="hidden sm:flex w-12 h-12 rounded-lg items-center justify-center font-bold text-sm flex-shrink-0"
+                          style={{ background: C.navy + "12", color: C.navy }}>{p.brand}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm" style={{ color: C.textDark }}>{p.ref}</span>
+                            <StatusBadge status={p.status} />
+                            {alertCount > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-full"
+                                style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" }}>
+                                <AlertTriangle size={9} /> {alertCount}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                            <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                              <MapPin size={10} />{p.city}, {p.country}
+                            </span>
+                            <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                              <User size={10} />{p.client}
+                            </span>
+                            {p.sqm && (
+                              <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                                <Ruler size={10} />{p.sqm} m²
+                              </span>
+                            )}
+                            {p.startDate && (
+                              <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                                <Calendar size={10} />{fmtDate(p.startDate)}{p.duration ? ` · ${p.duration}h` : ""}
+                              </span>
+                            )}
+                            {p.locations?.length > 0 && (
+                              <span className="text-xs flex items-center gap-1" style={{ color: "#2563eb" }}>
+                                <Navigation size={10} />{p.locations.length} ubicación{p.locations.length > 1 ? "es" : ""}
+                              </span>
+                            )}
+                          </div>
+                          {(fee || expenses) && (
+                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                              {fee && (
+                                <span className="text-xs font-semibold flex items-center gap-1" style={{ color: C.navy }}>
+                                  📷 {fmt(fee)}
+                                  {feePerSqm && <span className="font-normal" style={{ color: C.textLight }}>· {fmtD(feePerSqm)}/m²</span>}
+                                </span>
+                              )}
+                              {expenses && (
+                                <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                                  ✈️ {fmt(expenses)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {total
+                            ? <div className="font-bold text-base" style={{ color: C.green }}>{fmt(total)}</div>
+                            : <div className="text-sm" style={{ color: C.textLight }}>Sin opción</div>}
+                        </div>
+                        <ChevronRight size={16} style={{ color: C.textLight }} className="flex-shrink-0" />
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="text-right flex-shrink-0">
-                  {total
-                    ? <div className="font-bold text-base" style={{ color: C.green }}>{fmt(total)}</div>
-                    : <div className="text-sm" style={{ color: C.textLight }}>Sin opción</div>}
-                </div>
-                <ChevronRight size={16} style={{ color: C.textLight }} className="flex-shrink-0" />
-              </button>
-            );
-          })}
+              </div>
+            ));
+          })()}
         </div>
       </div>
     </div>
@@ -2120,6 +2164,175 @@ function NewProjectView({ onBack, onCreate }) {
   );
 }
 
+// ─── PENDING PAYMENTS VIEW ───────────────────────────────────────────────────
+function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack }) {
+  const pendingItems = useMemo(() => {
+    const items = [];
+    projects.forEach(proj => {
+      (proj.expenses || []).forEach(exp => {
+        if (exp.payStatus === "alert") {
+          const opt = proj.chosenOption;
+          const amount = opt ? (exp[optKey(opt)] ?? null) : null;
+          items.push({ project: proj, expense: exp, amount });
+        }
+      });
+    });
+    items.sort((a, b) => {
+      const dc = (b.project.startDate || "").localeCompare(a.project.startDate || "");
+      return dc !== 0 ? dc : (b.expense.date || "").localeCompare(a.expense.date || "");
+    });
+    return items;
+  }, [projects]);
+
+  const totalPending = pendingItems.reduce((s, i) => s + (i.amount || 0), 0);
+
+  const grouped = useMemo(() => {
+    const map = new Map();
+    pendingItems.forEach(item => {
+      const key = item.project.id;
+      if (!map.has(key)) map.set(key, { project: item.project, items: [] });
+      map.get(key).items.push(item);
+    });
+    return Array.from(map.values());
+  }, [pendingItems]);
+
+  return (
+    <div className="min-h-screen" style={{ background: C.bg }}>
+      <div style={{ background: C.navy }} className="px-6 pt-8 pb-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">📊 Presupuestos</h1>
+              <p className="text-sm mt-0.5" style={{ color: "#94a3b8" }}>{projects.length} proyectos</p>
+            </div>
+          </div>
+          {/* Nav tabs */}
+          <div className="flex gap-1">
+            <button onClick={onBack}
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors"
+              style={{ background: "transparent" }}>
+              Proyectos
+            </button>
+            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
+              style={{ background: "rgba(255,255,255,0.15)" }}>
+              Pendientes de pago
+              {pendingItems.length > 0 && (
+                <span className="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full align-middle"
+                  style={{ background: "#dc2626", color: "#fff" }}>
+                  {pendingItems.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        {/* Summary banner */}
+        {pendingItems.length > 0 && (
+          <div className="rounded-xl p-4 flex items-center gap-4"
+            style={{ background: "#fff7f7", border: "1px solid #fca5a5" }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "#fee2e2" }}>
+              <AlertTriangle size={20} style={{ color: "#dc2626" }} />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold" style={{ color: "#991b1b" }}>
+                Total pendiente: {fmt(totalPending)}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "#b91c1c" }}>
+                {pendingItems.length} gasto{pendingItems.length !== 1 ? "s" : ""} en {grouped.length} proyecto{grouped.length !== 1 ? "s" : ""}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pendingItems.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-5xl mb-4">✅</div>
+            <div className="text-base font-semibold mb-1" style={{ color: C.textDark }}>Sin pagos pendientes</div>
+            <div className="text-sm" style={{ color: C.textLight }}>
+              Marca gastos en rojo (🔴) dentro de cada proyecto para que aparezcan aquí
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {grouped.map(({ project: proj, items }) => {
+              const projTotal = items.reduce((s, i) => s + (i.amount || 0), 0);
+              return (
+                <div key={proj.id} className="rounded-xl overflow-hidden"
+                  style={{ background: C.card, border: `1px solid #fca5a5` }}>
+                  {/* Project header row */}
+                  <div className="flex items-center justify-between px-4 py-3"
+                    style={{ background: "#fef2f2", borderBottom: "1px solid #fca5a5" }}>
+                    <button onClick={() => onSelectProject(proj)}
+                      className="flex items-center gap-2 hover:opacity-70 transition-opacity text-left min-w-0">
+                      <span className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
+                        style={{ background: C.navy + "15", color: C.navy }}>{proj.brand}</span>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm flex items-center gap-1" style={{ color: C.textDark }}>
+                          {proj.ref}
+                          <ChevronRight size={13} style={{ color: C.textLight }} />
+                        </div>
+                        <div className="text-xs truncate" style={{ color: C.textMid }}>
+                          {proj.city}, {proj.country}{proj.startDate ? ` · ${fmtDate(proj.startDate)}` : ""}
+                        </div>
+                      </div>
+                    </button>
+                    <div className="font-bold text-sm flex-shrink-0 ml-4" style={{ color: "#dc2626" }}>
+                      {fmt(projTotal)}
+                    </div>
+                  </div>
+
+                  {/* Expense rows */}
+                  <div>
+                    {items.map(({ expense: exp, amount }) => {
+                      const Icon = getCatIcon(exp.desc);
+                      return (
+                        <div key={exp.id} className="flex items-center gap-3 px-4 py-3"
+                          style={{ borderTop: "1px solid #fee2e2", background: "#fffafa" }}>
+                          <Icon size={14} style={{ color: "#dc2626", flexShrink: 0 }} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium" style={{ color: C.textDark }}>{exp.desc || "—"}</div>
+                            <div className="text-xs flex items-center gap-2 mt-0.5 flex-wrap">
+                              {exp.date && <span style={{ color: C.textMid }}>{fmtDate(exp.date)}</span>}
+                              {exp.provider && <span style={{ color: C.textMid }}>{exp.provider}</span>}
+                              {exp.url && (
+                                <a href={exp.url} target="_blank" rel="noopener noreferrer"
+                                  className="flex items-center gap-0.5 hover:underline"
+                                  style={{ color: "#2563eb" }}>
+                                  <ExternalLink size={10} /> Ver
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-2">
+                            {amount != null && (
+                              <div className="text-sm font-semibold" style={{ color: "#dc2626" }}>
+                                {fmt(amount)}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => onMarkPaid(proj.id, exp.id)}
+                              className="mt-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80 transition-opacity"
+                              style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0" }}>
+                              ✓ Pagado
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
   const { projects, loading, syncErr, save, create, remove } = useProjects();
@@ -2151,9 +2364,21 @@ export default function App() {
       status: "Pendiente",
       chosenOption: null,
     };
-    delete dup.id; // Notion will assign a new UUID
+    delete dup.id;
     const fresh = await create(dup);
     if (fresh) { setSelectedId(fresh.id); setView("detail"); }
+  };
+
+  const handleMarkPaid = async (projectId, expenseId) => {
+    const proj = projects.find(p => p.id === projectId);
+    if (!proj) return;
+    const updated = {
+      ...proj,
+      expenses: (proj.expenses || []).map(e =>
+        e.id === expenseId ? { ...e, payStatus: "paid" } : e
+      ),
+    };
+    await save(updated);
   };
 
   if (loading && projects.length === 0) {
@@ -2177,7 +2402,9 @@ export default function App() {
         ? <DetailView project={selected} onBack={() => setView("list")} onSave={handleSave} onDelete={handleDelete} onDuplicate={handleDuplicate} />
         : view === "new"
         ? <NewProjectView onBack={() => setView("list")} onCreate={handleCreate} />
-        : <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} />
+        : view === "pending"
+        ? <PendingPaymentsView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onMarkPaid={handleMarkPaid} onBack={() => setView("list")} />
+        : <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} onGoToPending={() => setView("pending")} />
       }
     </>
   );
