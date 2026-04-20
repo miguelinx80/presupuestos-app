@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
-  Building2, Search, Plus, ChevronRight, ArrowLeft, MapPin, User,
+  Building2, Search, Plus, ChevronRight, ChevronLeft, ArrowLeft, MapPin, User,
   Calendar, Ruler, TrendingUp, CheckCircle2, Clock, XCircle,
   Euro, Edit3, Trash2, Save, X, Plane, Car, Hotel,
   Utensils, Bus, ExternalLink, ChevronDown, ChevronUp, Navigation, FileText,
-  Copy, CloudSun, ClipboardCheck, Check, GripVertical, AlertTriangle
+  Copy, CloudSun, ClipboardCheck, Check, GripVertical, AlertTriangle, Download
 } from "lucide-react";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -55,6 +55,89 @@ const fmtDate = (s) => {
   if (!y) return s;
   return d ? `${d}/${m}/${y}` : m ? `${m}/${y}` : y;
 };
+
+// ─── CALENDAR HELPERS ────────────────────────────────────────────────────────
+const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DAYS_ES   = ["Lu","Ma","Mi","Ju","Vi","Sá","Do"];
+
+function projectColor(id) {
+  const palette = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899","#14b8a6","#6366f1"];
+  const hash = String(id).split("").reduce((h, c) => ((h * 31) | 0) + c.charCodeAt(0), 0);
+  return palette[Math.abs(hash) % palette.length];
+}
+
+// ─── ICS EXPORT ──────────────────────────────────────────────────────────────
+function generateICS(project) {
+  const esc   = s => String(s || "").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  const dtD   = s => s.replace(/-/g, "");
+  const stamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z";
+
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Presupuestos//Miguel Jiménez//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+
+  const ev = (uid, summary, start, end, location, description, url) => {
+    lines.push("BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${stamp}`, `SUMMARY:${esc(summary)}`, start);
+    if (end)         lines.push(end);
+    if (location)    lines.push(`LOCATION:${esc(location)}`);
+    if (description) lines.push(`DESCRIPTION:${esc(description)}`);
+    if (url)         lines.push(`URL:${url}`);
+    lines.push("END:VEVENT");
+  };
+
+  // Evento principal del proyecto
+  if (project.startDate) {
+    ev(`${project.id}-shoot@presupuestos`,
+      `📷 ${project.ref}`,
+      `DTSTART;VALUE=DATE:${dtD(project.startDate)}`,
+      null,
+      [project.city, project.country].filter(Boolean).join(", "),
+      `${project.client} · ${project.city}, ${project.country}`,
+      null);
+  }
+
+  // Ubicaciones
+  (project.locations || []).forEach((loc, i) => {
+    if (!loc.date) return;
+    const start = loc.time
+      ? `DTSTART:${dtD(loc.date)}T${loc.time.replace(":", "").padEnd(4, "0")}00`
+      : `DTSTART;VALUE=DATE:${dtD(loc.date)}`;
+    ev(`${project.id}-loc${i}@presupuestos`,
+      `📍 ${loc.name || project.ref}`,
+      start, null, loc.name,
+      [project.ref, loc.notes].filter(Boolean).join(" · "),
+      loc.mapsUrl || null);
+  });
+
+  // Gastos con fecha (vuelos, hotel…)
+  (project.expenses || []).forEach((exp, i) => {
+    if (!exp.date) return;
+    const isAir = exp.desc.includes(">") || exp.desc.toLowerCase().includes("vuelo");
+    const icon  = isAir ? "✈️" : "📌";
+    let start, end = null;
+    if (exp.time && exp.time.includes("–")) {
+      const [s, e] = exp.time.split("–").map(t => t.trim().replace(":", "").padEnd(4, "0"));
+      start = `DTSTART:${dtD(exp.date)}T${s}00`;
+      end   = `DTEND:${dtD(exp.date)}T${e}00`;
+    } else {
+      start = `DTSTART;VALUE=DATE:${dtD(exp.date)}`;
+    }
+    ev(`${project.id}-exp${i}@presupuestos`,
+      `${icon} ${exp.desc}`,
+      start, end, null,
+      [exp.provider, exp.tarifa, exp.time].filter(Boolean).join(" · "),
+      exp.url || null);
+  });
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function downloadICS(project) {
+  const blob = new Blob([generateICS(project)], { type: "text/calendar;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement("a"), { href: url, download: `${project.ref.replace(/\s+/g, "-")}.ics` });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 // ─── SAMPLE DATA ─────────────────────────────────────────────────────────────
 // Location object: { id, name, mapsUrl, date (YYYY-MM-DD), time, notes }
@@ -1330,7 +1413,7 @@ function QuoteModal({ project, onClose }) {
 }
 
 // ─── RESUMEN VIEW ─────────────────────────────────────────────────────────────
-function ResumeView({ projects, onSelect, onNewProject, onGoToPending }) {
+function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCalendar }) {
   const [search, setSearch]             = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterYear, setFilterYear]     = useState("Todos");
@@ -1381,9 +1464,13 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending }) {
               style={{ background: "rgba(255,255,255,0.15)" }}>
               Proyectos
             </button>
+            <button onClick={onGoToCalendar}
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              Calendario
+            </button>
             <button onClick={onGoToPending}
               className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
-              Pendientes de pago
+              Pendientes
               {pendingPayCount > 0 && (
                 <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
                   style={{ background: "#dc2626", color: "#fff" }}>
@@ -1632,6 +1719,12 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
                     style={{ background: C.gold, color: C.navy }}>
                     <FileText size={13} /> Presupuesto
+                  </button>
+                  <button onClick={() => downloadICS(project)}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+                    title="Exportar a Google Calendar / Apple Calendar">
+                    <Download size={13} /> .ics
                   </button>
                   <button onClick={() => onDuplicate(project)}
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
@@ -2181,8 +2274,160 @@ function NewProjectView({ onBack, onCreate }) {
   );
 }
 
+// ─── CALENDAR VIEW ───────────────────────────────────────────────────────────
+function CalendarView({ projects, onSelectProject, onGoToList, onGoToPending }) {
+  const today = new Date();
+  const [year,  setYear]  = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+
+  const pendingPayCount = useMemo(() =>
+    projects.reduce((s, p) => s + (p.expenses || []).filter(e => e.payStatus === "alert").length, 0),
+  [projects]);
+
+  // Map "YYYY-MM-DD" → [{project, type}] — one entry per project per day
+  const eventsByDate = useMemo(() => {
+    const map = {};
+    const add = (date, proj, type) => {
+      if (!date) return;
+      if (!map[date]) map[date] = [];
+      if (!map[date].some(e => e.project.id === proj.id)) map[date].push({ project: proj, type });
+    };
+    projects.forEach(proj => {
+      if (proj.startDate) add(proj.startDate, proj, "shoot");
+      (proj.locations || []).forEach(loc => { if (loc.date) add(loc.date, proj, "location"); });
+      (proj.expenses  || []).forEach(exp => {
+        if (exp.date && (exp.desc.includes(">") || exp.desc.toLowerCase().includes("vuelo") || exp.desc.toLowerCase().includes("hotel")))
+          add(exp.date, proj, "expense");
+      });
+    });
+    return map;
+  }, [projects]);
+
+  const pad = n => String(n).padStart(2, "0");
+  const todayStr   = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  const monthStr   = `${year}-${pad(month+1)}`;
+
+  // Build grid cells (null = empty padding)
+  const firstDow = (() => { const d = new Date(year, month, 1).getDay(); return d === 0 ? 6 : d - 1; })();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [...Array(firstDow).fill(null), ...Array.from({length: daysInMonth}, (_, i) => i + 1)];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const prevMonth = () => month === 0  ? (setMonth(11), setYear(y => y-1)) : setMonth(m => m-1);
+  const nextMonth = () => month === 11 ? (setMonth(0),  setYear(y => y+1)) : setMonth(m => m+1);
+
+  // Projects with events this month (for legend)
+  const monthProjects = useMemo(() => {
+    const set = new Map();
+    Object.entries(eventsByDate).forEach(([date, evts]) => {
+      if (date.startsWith(monthStr)) evts.forEach(e => set.set(e.project.id, e.project));
+    });
+    return [...set.values()];
+  }, [eventsByDate, monthStr]);
+
+  return (
+    <div className="min-h-screen" style={{ background: C.bg }}>
+      <div style={{ background: C.navy }} className="px-6 pt-8 pb-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">📊 Presupuestos</h1>
+              <p className="text-sm mt-0.5" style={{ color: "#94a3b8" }}>{projects.length} proyectos</p>
+            </div>
+          </div>
+          <div className="flex gap-1">
+            <button onClick={onGoToList} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Proyectos</button>
+            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white" style={{ background: "rgba(255,255,255,0.15)" }}>Calendario</button>
+            <button onClick={onGoToPending} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
+              Pendientes
+              {pendingPayCount > 0 && <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#dc2626", color: "#fff" }}>{pendingPayCount}</span>}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        {/* Month navigation */}
+        <div className="flex items-center justify-between">
+          <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-white transition-colors" style={{ color: C.textMid }}>
+            <ChevronLeft size={20} />
+          </button>
+          <h2 className="text-lg font-bold" style={{ color: C.textDark }}>
+            {MONTHS_ES[month]} {year}
+          </h2>
+          <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-white transition-colors" style={{ color: C.textMid }}>
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        {/* Calendar grid */}
+        <div className="rounded-xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+          {/* Day-of-week header */}
+          <div className="grid grid-cols-7 border-b" style={{ borderColor: C.border }}>
+            {DAYS_ES.map(d => (
+              <div key={d} className="text-center text-xs font-bold py-2" style={{ color: C.textLight }}>{d}</div>
+            ))}
+          </div>
+          {/* Day cells */}
+          <div className="grid grid-cols-7">
+            {cells.map((day, i) => {
+              if (!day) return (
+                <div key={i} className="border-b border-r" style={{ borderColor: C.border, minHeight: 72, background: "#fafafa" }} />
+              );
+              const dateStr = `${year}-${pad(month+1)}-${pad(day)}`;
+              const evts    = eventsByDate[dateStr] || [];
+              const isToday = dateStr === todayStr;
+              return (
+                <div key={i} className="border-b border-r p-1" style={{ borderColor: C.border, minHeight: 72 }}>
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full mb-1 text-xs font-bold"
+                    style={{ background: isToday ? C.navy : "transparent", color: isToday ? "#fff" : C.textMid }}>
+                    {day}
+                  </div>
+                  <div className="space-y-0.5">
+                    {evts.slice(0, 3).map(({ project: proj }, ei) => (
+                      <button key={ei} onClick={() => onSelectProject(proj)} title={proj.ref}
+                        className="w-full text-left text-xs px-1 py-0.5 rounded truncate hover:opacity-75 transition-opacity"
+                        style={{ background: projectColor(proj.id) + "22", color: projectColor(proj.id), borderLeft: `2px solid ${projectColor(proj.id)}` }}>
+                        {proj.ref}
+                      </button>
+                    ))}
+                    {evts.length > 3 && (
+                      <div className="text-xs px-1" style={{ color: C.textLight }}>+{evts.length - 3}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Legend — projects with events this month */}
+        {monthProjects.length > 0 && (
+          <div className="rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+            <div className="text-xs font-semibold mb-2" style={{ color: C.textMid }}>Proyectos este mes</div>
+            <div className="flex flex-wrap gap-2">
+              {monthProjects.map(proj => (
+                <button key={proj.id} onClick={() => onSelectProject(proj)}
+                  className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg hover:opacity-80 transition-opacity"
+                  style={{ background: projectColor(proj.id) + "18", color: projectColor(proj.id), border: `1px solid ${projectColor(proj.id)}40` }}>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: projectColor(proj.id) }} />
+                  {proj.ref}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {monthProjects.length === 0 && (
+          <div className="text-center py-12 text-sm" style={{ color: C.textLight }}>Sin proyectos en {MONTHS_ES[month]}.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── PENDING PAYMENTS VIEW ───────────────────────────────────────────────────
-function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack }) {
+function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack, onGoToCalendar }) {
   const pendingItems = useMemo(() => {
     const items = [];
     projects.forEach(proj => {
@@ -2226,9 +2471,12 @@ function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack }) 
           {/* Nav tabs */}
           <div className="flex gap-1">
             <button onClick={onBack}
-              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors"
-              style={{ background: "transparent" }}>
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
               Proyectos
+            </button>
+            <button onClick={onGoToCalendar}
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              Calendario
             </button>
             <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
               style={{ background: "rgba(255,255,255,0.15)" }}>
@@ -2420,8 +2668,10 @@ export default function App() {
         : view === "new"
         ? <NewProjectView onBack={() => setView("list")} onCreate={handleCreate} />
         : view === "pending"
-        ? <PendingPaymentsView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onMarkPaid={handleMarkPaid} onBack={() => setView("list")} />
-        : <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} onGoToPending={() => setView("pending")} />
+        ? <PendingPaymentsView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onMarkPaid={handleMarkPaid} onBack={() => setView("list")} onGoToCalendar={() => setView("calendar")} />
+        : view === "calendar"
+        ? <CalendarView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onGoToList={() => setView("list")} onGoToPending={() => setView("pending")} />
+        : <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} onGoToPending={() => setView("pending")} onGoToCalendar={() => setView("calendar")} />
       }
     </>
   );
