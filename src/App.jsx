@@ -637,7 +637,9 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete, drag
             <X size={14} />
           </button>
         </td>
-        <td className="py-2 pr-2">
+        <td className="py-2 pr-2"
+          style={{ position: "sticky", left: 0, zIndex: 1,
+            background: rowBg || C.card, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
           <input value={row.desc} onChange={e => onChange("desc", e.target.value)}
             placeholder="Descripción"
             className="w-full rounded px-2 py-1 text-xs outline-none"
@@ -694,7 +696,11 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete, drag
       <td className="py-1.5 pr-2 w-5">
         <Icon size={13} style={{ color: C.textLight }} />
       </td>
-      <td className="py-1.5 pr-2 font-medium text-xs" style={{ color: C.textDark }}>{row.desc}</td>
+      <td className="py-1.5 pr-2 font-medium text-xs"
+        style={{ color: C.textDark, position: "sticky", left: 0, zIndex: 1,
+          background: rowBg || C.card, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
+        {row.desc}
+      </td>
       <td className="py-1.5 pr-2 w-6 text-center">
         {row.url
           ? <a href={row.url} target="_blank" rel="noopener noreferrer" title={row.url}
@@ -1887,8 +1893,11 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                         <th className="w-6" />{/* icon */}
                       </>
                     )}
-                    {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map(h => (
-                      <th key={h} className="text-left pb-2 font-medium text-xs pr-3" style={{ color: C.textLight }}>{h}</th>
+                    {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map((h, i) => (
+                      <th key={h} className="text-left pb-2 font-medium text-xs pr-3"
+                        style={{ color: C.textLight, ...(i === 0 ? { position: "sticky", left: 0, zIndex: 3, background: C.card } : {}) }}>
+                        {h}
+                      </th>
                     ))}
                     {(editing ? visibleExpOpts : usedExpOpts(project.expenses).length ? usedExpOpts(project.expenses) : optKeys).map(o => (
                       <th key={o} className="text-right pb-2 font-bold text-xs px-1 whitespace-nowrap"
@@ -2137,8 +2146,11 @@ function NewProjectView({ onBack, onCreate }) {
                   <thead>
                     <tr>
                       <th className="w-7" />
-                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...visibleExpOpts.map(o => `Op. ${o}`)].map(h => (
-                        <th key={h} className="text-left pb-2 font-medium text-xs pr-2" style={{ color: C.textLight }}>{h}</th>
+                      {["Descripción","Enlace","Fecha","Horario","Proveedor","Tarifa",...visibleExpOpts.map(o => `Op. ${o}`)].map((h, i) => (
+                        <th key={h} className="text-left pb-2 font-medium text-xs pr-2"
+                          style={{ color: C.textLight, ...(i === 0 ? { position: "sticky", left: 0, zIndex: 3, background: C.card } : {}) }}>
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
