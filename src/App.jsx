@@ -626,19 +626,22 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete, drag
         onDragOver={dragHandlers?.onDragOver}
         onDrop={dragHandlers?.onDrop}
         onDragEnd={dragHandlers?.onDragEnd}>
-        <td className="py-2 pr-1 cursor-grab" style={{ color: C.textLight }}>
+        <td className="py-2 pr-1 cursor-grab"
+          style={{ color: C.textLight, position: "sticky", left: 0, zIndex: 1, background: rowBg || C.card }}>
           <GripVertical size={14} />
         </td>
-        <td className="py-2 pr-1">
+        <td className="py-2 pr-1"
+          style={{ position: "sticky", left: 16, zIndex: 1, background: rowBg || C.card }}>
           <PayDot status={row.payStatus} onChange={onChange} />
         </td>
-        <td className="py-2 pr-2">
+        <td className="py-2 pr-2"
+          style={{ position: "sticky", left: 36, zIndex: 1, background: rowBg || C.card }}>
           <button type="button" onClick={onDelete} className="text-red-400 hover:text-red-600">
             <X size={14} />
           </button>
         </td>
         <td className="py-2 pr-2"
-          style={{ position: "sticky", left: 0, zIndex: 1,
+          style={{ position: "sticky", left: 64, zIndex: 1,
             background: rowBg || C.card, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
           <input value={row.desc} onChange={e => onChange("desc", e.target.value)}
             placeholder="Descripción"
@@ -690,14 +693,16 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete, drag
 
   return (
     <tr style={{ borderTop: `1px solid ${C.border}`, background: rowBg }}>
-      <td className="py-1.5 pr-1 w-4">
+      <td className="py-1.5 pr-1 w-4"
+        style={{ position: "sticky", left: 0, zIndex: 1, background: rowBg || C.card }}>
         <PayDot status={row.payStatus} onChange={onChange} />
       </td>
-      <td className="py-1.5 pr-2 w-5">
+      <td className="py-1.5 pr-2 w-5"
+        style={{ position: "sticky", left: 20, zIndex: 1, background: rowBg || C.card }}>
         <Icon size={13} style={{ color: C.textLight }} />
       </td>
       <td className="py-1.5 pr-2 font-medium text-xs"
-        style={{ color: C.textDark, position: "sticky", left: 0, zIndex: 1,
+        style={{ color: C.textDark, position: "sticky", left: 44, zIndex: 1,
           background: rowBg || C.card, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
         {row.desc}
       </td>
@@ -1883,19 +1888,19 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                   <tr>
                     {editing ? (
                       <>
-                        <th className="w-4" />{/* drag */}
-                        <th className="w-5" />{/* paydot */}
-                        <th className="w-7" />{/* delete */}
+                        <th className="w-4" style={{ position: "sticky", left: 0,  zIndex: 3, background: C.card }} />{/* drag */}
+                        <th className="w-5" style={{ position: "sticky", left: 16, zIndex: 3, background: C.card }} />{/* paydot */}
+                        <th className="w-7" style={{ position: "sticky", left: 36, zIndex: 3, background: C.card }} />{/* delete */}
                       </>
                     ) : (
                       <>
-                        <th className="w-5" />{/* paydot */}
-                        <th className="w-6" />{/* icon */}
+                        <th className="w-5" style={{ position: "sticky", left: 0,  zIndex: 3, background: C.card }} />{/* paydot */}
+                        <th className="w-6" style={{ position: "sticky", left: 20, zIndex: 3, background: C.card }} />{/* icon */}
                       </>
                     )}
                     {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map((h, i) => (
                       <th key={h} className="text-left pb-2 font-medium text-xs pr-3"
-                        style={{ color: C.textLight, ...(i === 0 ? { position: "sticky", left: 0, zIndex: 3, background: C.card } : {}) }}>
+                        style={{ color: C.textLight, ...(i === 0 ? { position: "sticky", left: editing ? 64 : 44, zIndex: 3, background: C.card } : {}) }}>
                         {h}
                       </th>
                     ))}
