@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# Redirige /api/supabase → función serverless (sin cambiar App.jsx)
+[[redirects]]
+  from   = "/api/supabase"
+  to     = "/.netlify/functions/supabase"
+  status = 200
+
+# SPA fallback — todas las rutas sirven index.html
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
