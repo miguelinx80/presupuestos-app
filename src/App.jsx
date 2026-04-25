@@ -447,6 +447,42 @@ function defaultQuoteRef() {
   return `${dd}${mm}${yy}_1`;
 }
 
+// ─── DEBOUNCED INPUT ─────────────────────────────────────────────────────────
+function DebouncedInput({ value, onCommit, delay = 600, ...props }) {
+  const [local, setLocal] = useState(value);
+  const timer = useRef(null);
+  useEffect(() => { setLocal(value); }, [value]);
+  const handleChange = (e) => {
+    const v = e.target.value;
+    setLocal(v);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => onCommit(v), delay);
+  };
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return <input {...props} value={local} onChange={handleChange} />;
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function Toast({ message, onHide }) {
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(onHide, 2000);
+    return () => clearTimeout(t);
+  }, [message, onHide]);
+  if (!message) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+      background: C.navy, color: "#fff", borderRadius: 10, padding: "10px 18px",
+      fontSize: 13, fontFamily: "sans-serif", zIndex: 10000,
+      boxShadow: "0 4px 16px rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 8,
+      whiteSpace: "nowrap",
+    }}>
+      <Check size={14} color="#43a047" /> {message}
+    </div>
+  );
+}
+
 // ─── STATUS BADGE ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.Pendiente;
@@ -1189,7 +1225,7 @@ td.num{text-align:right;white-space:nowrap}
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
-<div class="tot">Total excl VAT:&nbsp;&nbsp;&nbsp;${fmtN(total)}</div>
+<div class="tot">${isES ? "Total (excl. IVA)" : "Total excl. VAT"}:&nbsp;&nbsp;&nbsp;${fmtN(total)}</div>
 ${pageNotes?`<div class="notes">${pageNotes.replace(/\n/g,"<br>")}</div>`:""}
 </body></html>`;
 }
@@ -1458,6 +1494,13 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
 
   const totalBilled    = projects.filter(p => p.status === "Facturado"  && p.chosenOption).reduce((s, p) => s + (p.options[p.chosenOption]?.total || 0), 0);
   const totalConfirmed = projects.filter(p => p.status === "Confirmado" && p.chosenOption).reduce((s, p) => s + (p.options[p.chosenOption]?.total || 0), 0);
+  const missingInvoiceAmount = useMemo(() =>
+    projects.reduce((s, p) => {
+      const opt = p.chosenOption;
+      return s + (p.expenses || []).filter(e => e.invoiceStatus === "missing")
+        .reduce((ss, e) => ss + (opt ? (Number(e[optKey(opt)]) || 0) : 0), 0);
+    }, 0)
+  , [projects]);
 
   const chartData = useMemo(() => {
     const by = {};
@@ -1511,11 +1554,12 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
               Facturas
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <StatCard label="Proyectos activos" value={projects.filter(p => p.status !== "Cancelado").length} icon={Building2} accent={C.gold} />
             <StatCard label="Facturado" value={fmt(totalBilled)} sub="proyectos cerrados" icon={Euro} accent={C.greenLight} />
             <StatCard label="Confirmado" value={fmt(totalConfirmed)} sub="en ejecución" icon={CheckCircle2} accent="#3b82f6" />
             <StatCard label="Pendiente" value={projects.filter(p => p.status === "Pendiente").length} sub="por confirmar" icon={Clock} accent="#f59e0b" />
+            <StatCard label="Facturas pendientes" value={fmt(missingInvoiceAmount)} sub="gastos sin justificar" icon={AlertTriangle} accent="#f59e0b" />
           </div>
         </div>
       </div>
@@ -1607,6 +1651,13 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm" style={{ color: C.textDark }}>{p.ref}</span>
                             <StatusBadge status={p.status} />
+                            {p.notes && (
+                              <span title={p.notes}
+                                className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full"
+                                style={{ background: "#f1f5f9", color: C.textLight, border: `1px solid ${C.border}` }}>
+                                <FileText size={9} />
+                              </span>
+                            )}
                             {alertCount > 0 && (
                               <span className="inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-full"
                                 style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" }}>
@@ -1818,7 +1869,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
             ["País",      "country",   <MapPin size={13} />],
             ["Ciudad",    "city",      <MapPin size={13} />],
             ["Superficie","sqm",       <Ruler size={13} />, " m²"],
-            ["Duración",  "duration",  <Clock size={13} />, " h"],
+            ["Duración",  "duration",  <Clock size={13} />, " días"],
           ].map(([label, key, icon, suffix]) => (
             <div key={key}>
               <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>{icon} {label}</div>
@@ -2004,8 +2055,48 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
             )}
           </div>
 
+          {showExpenses && !editing && (
+            /* ── Mobile card view (hidden on sm+) ── */
+            <div className="block sm:hidden space-y-2 mt-1">
+              {p.expenses.map(row => {
+                const Icon = getCatIcon(row.desc);
+                const amount = row[optKey(activeOpt)];
+                const rowBg = PAY_STYLE[row.payStatus]?.bg;
+                return (
+                  <div key={row.id} className="rounded-xl px-4 py-3 flex items-start gap-3"
+                    style={{ background: rowBg || "#f8fafc", border: `1px solid ${C.border}` }}>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-shrink-0">
+                      <PayDot status={row.payStatus} onChange={(f, v) => { const u = { ...p, expenses: p.expenses.map(e => e.id === row.id ? { ...e, [f]: v } : e) }; setProject(u); onSave(u); }} />
+                      <InvoiceDot status={row.invoiceStatus} onChange={(f, v) => { const u = { ...p, expenses: p.expenses.map(e => e.id === row.id ? { ...e, [f]: v } : e) }; setProject(u); onSave(u); }} />
+                    </div>
+                    <Icon size={14} style={{ color: C.textLight, flexShrink: 0, marginTop: 2 }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate" style={{ color: C.textDark }}>{row.desc}</div>
+                      <div className="text-xs mt-0.5 flex flex-wrap gap-x-2" style={{ color: C.textMid }}>
+                        {row.provider && <span>{row.provider}</span>}
+                        {row.date && <span>{fmtDate(row.date)}</span>}
+                        {row.url && <a href={row.url} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}><ExternalLink size={10} className="inline" /> enlace</a>}
+                      </div>
+                    </div>
+                    {amount != null && (
+                      <span className="text-sm font-bold flex-shrink-0" style={{ color: activeOpt === p.chosenOption ? C.green : C.textDark }}>
+                        {fmt(amount)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              <div className="flex justify-between pt-2 px-1 text-xs font-semibold" style={{ color: C.textDark }}>
+                <span>Subtotal Op. {activeOpt}</span><span>{fmt(computedSubtotal)}</span>
+              </div>
+              <div className="flex justify-between px-1 text-sm font-bold" style={{ color: C.green }}>
+                <span>Total (+20%)</span><span>{fmt(computedSubtotal * 1.2)}</span>
+              </div>
+            </div>
+          )}
+
           {showExpenses && (
-            <div className="overflow-x-auto">
+            <div className={editing ? "overflow-x-auto" : "hidden sm:block overflow-x-auto"}>
               <table className="w-full text-sm" style={{ minWidth: editing ? 800 + visibleExpOpts.length * 80 : 680 }}>
                 <thead>
                   <tr>
@@ -2859,18 +2950,18 @@ function InvoicesView({ projects, onSelectProject, onBack, onGoToCalendar, onGoT
                     <div className="mt-3 pl-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
                         <label className="text-xs block mb-1 font-medium" style={{ color: C.textLight }}>Nº factura / referencia</label>
-                        <input
+                        <DebouncedInput
                           value={exp.invoiceRef || ""}
-                          onChange={e => onUpdateExpense(proj.id, exp.id, "invoiceRef", e.target.value)}
+                          onCommit={v => onUpdateExpense(proj.id, exp.id, "invoiceRef", v)}
                           placeholder="FAC-2024-001"
                           className="w-full rounded px-2 py-1.5 text-xs outline-none"
                           style={inputSt} />
                       </div>
                       <div>
                         <label className="text-xs block mb-1 font-medium" style={{ color: C.textLight }}>Enlace escaneo / Drive</label>
-                        <input
+                        <DebouncedInput
                           value={exp.invoiceScanUrl || ""}
-                          onChange={e => onUpdateExpense(proj.id, exp.id, "invoiceScanUrl", e.target.value)}
+                          onCommit={v => onUpdateExpense(proj.id, exp.id, "invoiceScanUrl", v)}
                           placeholder="https://drive.google.com/..."
                           className="w-full rounded px-2 py-1.5 text-xs outline-none"
                           style={inputSt} />
@@ -2898,6 +2989,8 @@ export default function App() {
   const { projects, loading, syncErr, save, create, remove } = useProjects();
   const [view, setView]             = useState("list");
   const [selectedId, setSelectedId] = useState(null);
+  const [toastMsg, setToastMsg]     = useState(null);
+  const showToast = (msg = "Guardado") => setToastMsg(msg);
 
   const selected = projects.find(p => p.id === selectedId);
 
@@ -2905,6 +2998,7 @@ export default function App() {
 
   const handleSave = async (updated) => {
     await save(updated);
+    showToast("✓ Guardado");
   };
 
   const handleDelete = async (id) => {
@@ -2939,6 +3033,7 @@ export default function App() {
       ),
     };
     await save(updated);
+    showToast("✓ Marcado como pagado");
   };
 
   const handleUpdateExpense = async (projectId, expenseId, field, value) => {
@@ -2951,6 +3046,7 @@ export default function App() {
       ),
     };
     await save(updated);
+    showToast("✓ Guardado");
   };
 
   if (loading && projects.length === 0) {
@@ -2965,6 +3061,7 @@ export default function App() {
 
   return (
     <>
+      <Toast message={toastMsg} onHide={() => setToastMsg(null)} />
       {syncErr && (
         <div style={{ position:"fixed", bottom:16, right:16, zIndex:9999, background:"#fee2e2", border:"1px solid #fca5a5", borderRadius:8, padding:"10px 16px", color:"#991b1b", fontFamily:"sans-serif", fontSize:13, maxWidth:320 }}>
           ⚠️ Sin conexión con Supabase — trabajando en local
