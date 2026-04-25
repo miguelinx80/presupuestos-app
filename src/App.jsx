@@ -1740,56 +1740,54 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
     <div className="min-h-screen" style={{ background: C.bg }}>
       <div style={{ background: `linear-gradient(135deg, ${C.navyDark} 0%, ${C.navyLight} 100%)` }} className="px-6 pt-6 pb-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white">
+          <div className="mb-4">
+            <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white mb-3">
               <ArrowLeft size={16} /> Volver
             </button>
-            <div className="flex items-center gap-2">
-              {!editing ? (
-                <>
-                  <button onClick={() => setShowQuote(true)}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: C.gold, color: C.navy }}>
-                    <FileText size={13} /> Presupuesto
-                  </button>
-                  <button onClick={() => downloadICS(project)}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
-                    title="Exportar a Google Calendar / Apple Calendar">
-                    <Download size={13} /> .ics
-                  </button>
-                  <button onClick={() => onDuplicate(project)}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
-                    title="Duplicar proyecto">
-                    <Copy size={13} /> Duplicar
-                  </button>
-                  <button onClick={() => { setDraft(project); setEditing(true); }}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                    <Edit3 size={13} /> Editar
-                  </button>
-                  <button onClick={() => { if (window.confirm("¿Eliminar este proyecto?")) onDelete(project.id); }}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5" }}>
-                    <Trash2 size={13} /> Eliminar
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={handleSave}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
-                    style={{ background: C.gold, color: C.navy }}>
-                    <Save size={13} /> Guardar
-                  </button>
-                  <button onClick={() => setEditing(false)}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                    <X size={13} /> Cancelar
-                  </button>
-                </>
-              )}
-            </div>
+            {!editing ? (
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
+                <button onClick={() => setShowQuote(true)}
+                  className="flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg"
+                  style={{ background: C.gold, color: C.navy }}>
+                  <FileText size={13} /> Oferta PDF
+                </button>
+                <button onClick={() => downloadICS(project)}
+                  className="flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg"
+                  style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+                  title="Exportar a Google Calendar / Apple Calendar">
+                  <Download size={13} /> .ics
+                </button>
+                <button onClick={() => onDuplicate(project)}
+                  className="flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg"
+                  style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+                  title="Duplicar proyecto">
+                  <Copy size={13} /> Duplicar
+                </button>
+                <button onClick={() => { setDraft(project); setEditing(true); }}
+                  className="flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg"
+                  style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
+                  <Edit3 size={13} /> Editar
+                </button>
+                <button onClick={() => { if (window.confirm("¿Eliminar este proyecto?")) onDelete(project.id); }}
+                  className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg"
+                  style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5" }}>
+                  <Trash2 size={13} /> Eliminar
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={handleSave}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+                  style={{ background: C.gold, color: C.navy }}>
+                  <Save size={13} /> Guardar
+                </button>
+                <button onClick={() => setEditing(false)}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg"
+                  style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
+                  <X size={13} /> Cancelar
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0"
