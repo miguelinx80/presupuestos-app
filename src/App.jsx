@@ -682,6 +682,12 @@ const PAY_STYLE = {
   alert: { bg: "#fff7f7", dot: "#dc2626", title: "Pendiente de pagar" },
 };
 
+const INV_CYCLE = { null: "missing", missing: "ok", ok: null };
+const INV_STYLE = {
+  missing: { dot: "#f59e0b", title: "Falta factura/ticket" },
+  ok:      { dot: "#0d9488", title: "Factura OK" },
+};
+
 function PayDot({ status, onChange }) {
   const s = PAY_STYLE[status];
   return (
@@ -689,6 +695,20 @@ function PayDot({ status, onChange }) {
       onClick={() => onChange("payStatus", PAY_CYCLE[status] ?? null)}
       style={{
         width: 11, height: 11, borderRadius: "50%", flexShrink: 0,
+        background: s ? s.dot : "transparent",
+        border: `2px solid ${s ? s.dot : "#cbd5e1"}`,
+        cursor: "pointer", display: "inline-block",
+      }} />
+  );
+}
+
+function InvoiceDot({ status, onChange }) {
+  const s = INV_STYLE[status];
+  return (
+    <button type="button" title={s?.title || "Sin revisar"}
+      onClick={() => onChange("invoiceStatus", INV_CYCLE[status] ?? null)}
+      style={{
+        width: 11, height: 11, borderRadius: 3, flexShrink: 0,
         background: s ? s.dot : "transparent",
         border: `2px solid ${s ? s.dot : "#cbd5e1"}`,
         cursor: "pointer", display: "inline-block",
@@ -717,14 +737,18 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete, drag
           style={{ position: "sticky", left: 16, zIndex: 1, background: rowBg || C.card }}>
           <PayDot status={row.payStatus} onChange={onChange} />
         </td>
-        <td className="py-2 pr-2"
+        <td className="py-2 pr-1"
           style={{ position: "sticky", left: 36, zIndex: 1, background: rowBg || C.card }}>
+          <InvoiceDot status={row.invoiceStatus} onChange={onChange} />
+        </td>
+        <td className="py-2 pr-2"
+          style={{ position: "sticky", left: 56, zIndex: 1, background: rowBg || C.card }}>
           <button type="button" onClick={onDelete} className="text-red-400 hover:text-red-600">
             <X size={14} />
           </button>
         </td>
         <td className="py-2 pr-2"
-          style={{ position: "sticky", left: 64, zIndex: 1,
+          style={{ position: "sticky", left: 80, zIndex: 1,
             background: rowBg || C.card, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
           <input value={row.desc} onChange={e => onChange("desc", e.target.value)}
             placeholder="Descripción"
@@ -780,12 +804,16 @@ function ExpenseRow({ row, optKeys, activeOpt, editing, onChange, onDelete, drag
         style={{ position: "sticky", left: 0, zIndex: 1, background: rowBg || C.card }}>
         <PayDot status={row.payStatus} onChange={onChange} />
       </td>
-      <td className="py-1.5 pr-2 w-5"
+      <td className="py-1.5 pr-1 w-4"
         style={{ position: "sticky", left: 20, zIndex: 1, background: rowBg || C.card }}>
+        <InvoiceDot status={row.invoiceStatus} onChange={onChange} />
+      </td>
+      <td className="py-1.5 pr-2 w-5"
+        style={{ position: "sticky", left: 40, zIndex: 1, background: rowBg || C.card }}>
         <Icon size={13} style={{ color: C.textLight }} />
       </td>
       <td className="py-1.5 pr-2 font-medium text-xs"
-        style={{ color: C.textDark, position: "sticky", left: 44, zIndex: 1,
+        style={{ color: C.textDark, position: "sticky", left: 64, zIndex: 1,
           background: rowBg || C.card, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
         {row.desc}
       </td>
@@ -1413,7 +1441,7 @@ function QuoteModal({ project, onClose }) {
 }
 
 // ─── RESUMEN VIEW ─────────────────────────────────────────────────────────────
-function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCalendar }) {
+function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCalendar, onGoToInvoices }) {
   const [search, setSearch]             = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterYear, setFilterYear]     = useState("Todos");
@@ -1477,6 +1505,10 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                   {pendingPayCount}
                 </span>
               )}
+            </button>
+            <button onClick={onGoToInvoices}
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              Facturas
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -1983,17 +2015,19 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                       <>
                         <th className="w-4" style={{ position: "sticky", left: 0,  zIndex: 3, background: C.card }} />{/* drag */}
                         <th className="w-5" style={{ position: "sticky", left: 16, zIndex: 3, background: C.card }} />{/* paydot */}
-                        <th className="w-7" style={{ position: "sticky", left: 36, zIndex: 3, background: C.card }} />{/* delete */}
+                        <th className="w-5" style={{ position: "sticky", left: 36, zIndex: 3, background: C.card }} />{/* invdot */}
+                        <th className="w-6" style={{ position: "sticky", left: 56, zIndex: 3, background: C.card }} />{/* delete */}
                       </>
                     ) : (
                       <>
                         <th className="w-5" style={{ position: "sticky", left: 0,  zIndex: 3, background: C.card }} />{/* paydot */}
-                        <th className="w-6" style={{ position: "sticky", left: 20, zIndex: 3, background: C.card }} />{/* icon */}
+                        <th className="w-5" style={{ position: "sticky", left: 20, zIndex: 3, background: C.card }} />{/* invdot */}
+                        <th className="w-6" style={{ position: "sticky", left: 40, zIndex: 3, background: C.card }} />{/* icon */}
                       </>
                     )}
                     {["Descripción","Enlace","Fecha","Horario","Proveedor/Aerolínea","Tarifa"].map((h, i) => (
                       <th key={h} className="text-left pb-2 font-medium text-xs pr-3"
-                        style={{ color: C.textLight, ...(i === 0 ? { position: "sticky", left: editing ? 64 : 44, zIndex: 3, background: C.card } : {}) }}>
+                        style={{ color: C.textLight, ...(i === 0 ? { position: "sticky", left: editing ? 80 : 64, zIndex: 3, background: C.card } : {}) }}>
                         {h}
                       </th>
                     ))}
@@ -2024,7 +2058,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `2px solid ${C.border}` }}>
-                    <td colSpan={editing ? 10 : 8} className="pt-2.5 font-semibold text-sm" style={{ color: C.textDark }}>
+                    <td colSpan={editing ? 11 : 9} className="pt-2.5 font-semibold text-sm" style={{ color: C.textDark }}>
                       Subtotal (Op. {activeOpt})
                     </td>
                     <td colSpan={(editing ? visibleExpOpts : optKeys).length} className="pt-2.5 text-right font-bold" style={{ color: C.textDark }}>
@@ -2032,7 +2066,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan={editing ? 10 : 8} className="pt-1 font-bold text-sm" style={{ color: C.green }}>
+                    <td colSpan={editing ? 11 : 9} className="pt-1 font-bold text-sm" style={{ color: C.green }}>
                       Total (+20% gastos finales)
                     </td>
                     <td colSpan={(editing ? visibleExpOpts : optKeys).length} className="pt-1 text-right font-bold text-base" style={{ color: C.green }}>
@@ -2275,7 +2309,7 @@ function NewProjectView({ onBack, onCreate }) {
 }
 
 // ─── CALENDAR VIEW ───────────────────────────────────────────────────────────
-function CalendarView({ projects, onSelectProject, onGoToList, onGoToPending }) {
+function CalendarView({ projects, onSelectProject, onGoToList, onGoToPending, onGoToInvoices }) {
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -2342,6 +2376,7 @@ function CalendarView({ projects, onSelectProject, onGoToList, onGoToPending }) 
               Pendientes
               {pendingPayCount > 0 && <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#dc2626", color: "#fff" }}>{pendingPayCount}</span>}
             </button>
+            <button onClick={onGoToInvoices} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Facturas</button>
           </div>
         </div>
       </div>
@@ -2427,7 +2462,7 @@ function CalendarView({ projects, onSelectProject, onGoToList, onGoToPending }) 
 }
 
 // ─── PENDING PAYMENTS VIEW ───────────────────────────────────────────────────
-function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack, onGoToCalendar }) {
+function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack, onGoToCalendar, onGoToInvoices }) {
   const pendingItems = useMemo(() => {
     const items = [];
     projects.forEach(proj => {
@@ -2487,6 +2522,10 @@ function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack, on
                   {pendingItems.length}
                 </span>
               )}
+            </button>
+            <button onClick={onGoToInvoices}
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              Facturas
             </button>
           </div>
         </div>
@@ -2598,6 +2637,264 @@ function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack, on
   );
 }
 
+// ─── INVOICES VIEW ────────────────────────────────────────────────────────────
+function InvoicesView({ projects, onSelectProject, onBack, onGoToCalendar, onGoToPending, onUpdateExpense }) {
+  const [filterStatus, setFilterStatus] = useState("Todos");
+  const [filterProject, setFilterProject] = useState("Todos");
+
+  // Collect all expenses from the chosen option per project
+  const allItems = useMemo(() => {
+    const items = [];
+    projects.forEach(proj => {
+      const opt = proj.chosenOption;
+      (proj.expenses || []).forEach(exp => {
+        const amount = opt ? (exp[optKey(opt)] ?? null) : null;
+        items.push({ project: proj, expense: exp, amount, opt });
+      });
+    });
+    items.sort((a, b) => (b.project.startDate || "").localeCompare(a.project.startDate || ""));
+    return items;
+  }, [projects]);
+
+  const projectList = useMemo(() => {
+    const seen = new Map();
+    allItems.forEach(i => { if (!seen.has(i.project.id)) seen.set(i.project.id, i.project.ref); });
+    return Array.from(seen.entries());
+  }, [allItems]);
+
+  const filtered = useMemo(() => allItems.filter(i => {
+    if (filterStatus !== "Todos") {
+      if (filterStatus === "Sin revisar" && i.expense.invoiceStatus != null) return false;
+      if (filterStatus === "Falta" && i.expense.invoiceStatus !== "missing") return false;
+      if (filterStatus === "OK" && i.expense.invoiceStatus !== "ok") return false;
+    }
+    if (filterProject !== "Todos" && String(i.project.id) !== filterProject) return false;
+    return true;
+  }), [allItems, filterStatus, filterProject]);
+
+  // Totals by invoiceStatus
+  const totals = useMemo(() => {
+    const t = { unreviewed: 0, missing: 0, ok: 0 };
+    allItems.forEach(i => {
+      const a = i.amount || 0;
+      if (!i.expense.invoiceStatus) t.unreviewed += a;
+      else if (i.expense.invoiceStatus === "missing") t.missing += a;
+      else if (i.expense.invoiceStatus === "ok") t.ok += a;
+    });
+    return t;
+  }, [allItems]);
+
+  // Urgency: Facturado projects with missing invoices
+  const urgentProjects = useMemo(() => {
+    const map = new Map();
+    allItems.forEach(i => {
+      if (i.project.status === "Facturado" && i.expense.invoiceStatus === "missing") {
+        const key = i.project.id;
+        if (!map.has(key)) map.set(key, { project: i.project, count: 0 });
+        map.get(key).count++;
+      }
+    });
+    return Array.from(map.values());
+  }, [allItems]);
+
+  const pendingPayCount = useMemo(() =>
+    projects.reduce((s, p) => s + (p.expenses || []).filter(e => e.payStatus === "alert").length, 0),
+  [projects]);
+
+  const downloadCSV = () => {
+    const rows = [["Proyecto","Estado","Opción","Descripción","Proveedor","Fecha","Importe","Estado pago","Estado factura","Nº factura","Enlace escaneo"]];
+    filtered.forEach(({ project: proj, expense: exp, amount }) => {
+      rows.push([
+        proj.ref, proj.status, proj.chosenOption || "—", exp.desc, exp.provider || "—",
+        exp.date || "—", amount != null ? amount : "—",
+        exp.payStatus === "paid" ? "Pagado" : exp.payStatus === "alert" ? "Pendiente" : "Sin marcar",
+        exp.invoiceStatus === "ok" ? "OK" : exp.invoiceStatus === "missing" ? "Falta" : "Sin revisar",
+        exp.invoiceRef || "—", exp.invoiceScanUrl || "—",
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"), { href: url, download: "facturas.csv" });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const inputSt = { background: "#f8fafc", border: `1px solid ${C.border}`, color: C.textDark };
+
+  return (
+    <div className="min-h-screen" style={{ background: C.bg }}>
+      <div style={{ background: C.navy }} className="px-6 pt-8 pb-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">📊 Presupuestos</h1>
+              <p className="text-sm mt-0.5" style={{ color: "#94a3b8" }}>{projects.length} proyectos</p>
+            </div>
+          </div>
+          <div className="flex gap-1 flex-wrap">
+            <button onClick={onBack} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Proyectos</button>
+            <button onClick={onGoToCalendar} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Calendario</button>
+            <button onClick={onGoToPending} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
+              Pendientes
+              {pendingPayCount > 0 && <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#dc2626", color: "#fff" }}>{pendingPayCount}</span>}
+            </button>
+            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white" style={{ background: "rgba(255,255,255,0.15)" }}>
+              Facturas
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        {/* Urgency banner */}
+        {urgentProjects.length > 0 && (
+          <div className="rounded-xl p-4 flex items-start gap-4" style={{ background: "#fffbeb", border: "1px solid #fcd34d" }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#fef3c7" }}>
+              <AlertTriangle size={18} style={{ color: "#d97706" }} />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold mb-1" style={{ color: "#92400e" }}>Proyectos facturados con tickets pendientes</div>
+              <div className="flex flex-wrap gap-2">
+                {urgentProjects.map(({ project: proj, count }) => (
+                  <button key={proj.id} onClick={() => onSelectProject(proj)}
+                    className="text-xs font-medium px-2.5 py-1 rounded-full hover:opacity-80 transition-opacity"
+                    style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}>
+                    {proj.ref} · {count} falta{count !== 1 ? "n" : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Sin revisar", amount: totals.unreviewed, color: C.textMid, bg: "#f8fafc", border: C.border },
+            { label: "Falta factura", amount: totals.missing, color: "#d97706", bg: "#fffbeb", border: "#fcd34d" },
+            { label: "Factura OK", amount: totals.ok, color: "#0d9488", bg: "#f0fdfa", border: "#99f6e4" },
+          ].map(({ label, amount, color, bg, border }) => (
+            <div key={label} className="rounded-xl p-3 text-center" style={{ background: bg, border: `1px solid ${border}` }}>
+              <div className="text-xs font-medium mb-1" style={{ color }}>{label}</div>
+              <div className="text-lg font-bold" style={{ color }}>{fmt(amount)}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters + CSV */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            className="text-sm rounded-xl px-3 py-2 outline-none"
+            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textDark }}>
+            <option>Todos</option>
+            <option>Sin revisar</option>
+            <option>Falta</option>
+            <option>OK</option>
+          </select>
+          <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
+            className="text-sm rounded-xl px-3 py-2 outline-none flex-1 min-w-0"
+            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textDark }}>
+            <option value="Todos">Todos los proyectos</option>
+            {projectList.map(([id, ref]) => <option key={id} value={String(id)}>{ref}</option>)}
+          </select>
+          <button onClick={downloadCSV}
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl hover:opacity-80 transition-opacity"
+            style={{ background: C.navy, color: "#fff" }}>
+            <Download size={14} /> CSV
+          </button>
+        </div>
+
+        {/* Expenses list */}
+        <div className="rounded-xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-sm" style={{ color: C.textLight }}>Sin gastos para mostrar.</div>
+          ) : (
+            <div className="divide-y" style={{ borderColor: C.border }}>
+              {filtered.map(({ project: proj, expense: exp, amount }) => {
+                const Icon = getCatIcon(exp.desc);
+                const invS = INV_STYLE[exp.invoiceStatus];
+                const payS = PAY_STYLE[exp.payStatus];
+                return (
+                  <div key={`${proj.id}-${exp.id}`} className="p-4"
+                    style={{ background: payS?.bg }}>
+                    {/* Header row */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-shrink-0">
+                        <PayDot status={exp.payStatus}
+                          onChange={(_, val) => onUpdateExpense(proj.id, exp.id, "payStatus", val)} />
+                        <InvoiceDot status={exp.invoiceStatus}
+                          onChange={(_, val) => onUpdateExpense(proj.id, exp.id, "invoiceStatus", val)} />
+                      </div>
+                      <Icon size={14} style={{ color: C.textLight, flexShrink: 0, marginTop: 1 }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold" style={{ color: C.textDark }}>{exp.desc}</span>
+                          {invS && (
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded-full"
+                              style={{ background: invS.dot + "22", color: invS.dot, border: `1px solid ${invS.dot}44` }}>
+                              {exp.invoiceStatus === "missing" ? "Falta" : "OK"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                          <button onClick={() => onSelectProject(proj)}
+                            className="text-xs hover:underline font-medium" style={{ color: C.navy }}>
+                            {proj.ref}
+                          </button>
+                          {exp.provider && <span className="text-xs" style={{ color: C.textMid }}>{exp.provider}</span>}
+                          {exp.date && <span className="text-xs" style={{ color: C.textLight }}>{fmtDate(exp.date)}</span>}
+                          {exp.url && (
+                            <a href={exp.url} target="_blank" rel="noopener noreferrer"
+                              className="text-xs flex items-center gap-0.5 hover:underline" style={{ color: "#2563eb" }}>
+                              <ExternalLink size={10} /> Enlace
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      {amount != null && (
+                        <span className="text-sm font-bold flex-shrink-0" style={{ color: C.textDark }}>{fmt(amount)}</span>
+                      )}
+                    </div>
+
+                    {/* Invoice-specific fields */}
+                    <div className="mt-3 pl-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs block mb-1 font-medium" style={{ color: C.textLight }}>Nº factura / referencia</label>
+                        <input
+                          value={exp.invoiceRef || ""}
+                          onChange={e => onUpdateExpense(proj.id, exp.id, "invoiceRef", e.target.value)}
+                          placeholder="FAC-2024-001"
+                          className="w-full rounded px-2 py-1.5 text-xs outline-none"
+                          style={inputSt} />
+                      </div>
+                      <div>
+                        <label className="text-xs block mb-1 font-medium" style={{ color: C.textLight }}>Enlace escaneo / Drive</label>
+                        <input
+                          value={exp.invoiceScanUrl || ""}
+                          onChange={e => onUpdateExpense(proj.id, exp.id, "invoiceScanUrl", e.target.value)}
+                          placeholder="https://drive.google.com/..."
+                          className="w-full rounded px-2 py-1.5 text-xs outline-none"
+                          style={inputSt} />
+                        {exp.invoiceScanUrl && (
+                          <a href={exp.invoiceScanUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-xs flex items-center gap-0.5 mt-1 hover:underline" style={{ color: "#2563eb" }}>
+                            <ExternalLink size={10} /> Ver escaneo
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
   const { projects, loading, syncErr, save, create, remove } = useProjects();
@@ -2646,6 +2943,18 @@ export default function App() {
     await save(updated);
   };
 
+  const handleUpdateExpense = async (projectId, expenseId, field, value) => {
+    const proj = projects.find(p => p.id === projectId);
+    if (!proj) return;
+    const updated = {
+      ...proj,
+      expenses: (proj.expenses || []).map(e =>
+        e.id === expenseId ? { ...e, [field]: value } : e
+      ),
+    };
+    await save(updated);
+  };
+
   if (loading && projects.length === 0) {
     return (
       <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
@@ -2668,10 +2977,12 @@ export default function App() {
         : view === "new"
         ? <NewProjectView onBack={() => setView("list")} onCreate={handleCreate} />
         : view === "pending"
-        ? <PendingPaymentsView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onMarkPaid={handleMarkPaid} onBack={() => setView("list")} onGoToCalendar={() => setView("calendar")} />
+        ? <PendingPaymentsView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onMarkPaid={handleMarkPaid} onBack={() => setView("list")} onGoToCalendar={() => setView("calendar")} onGoToInvoices={() => setView("invoices")} />
         : view === "calendar"
-        ? <CalendarView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onGoToList={() => setView("list")} onGoToPending={() => setView("pending")} />
-        : <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} onGoToPending={() => setView("pending")} onGoToCalendar={() => setView("calendar")} />
+        ? <CalendarView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onGoToList={() => setView("list")} onGoToPending={() => setView("pending")} onGoToInvoices={() => setView("invoices")} />
+        : view === "invoices"
+        ? <InvoicesView projects={projects} onSelectProject={p => { setSelectedId(p.id); setView("detail"); }} onBack={() => setView("list")} onGoToCalendar={() => setView("calendar")} onGoToPending={() => setView("pending")} onUpdateExpense={handleUpdateExpense} />
+        : <ResumeView projects={projects} onSelect={handleSelect} onNewProject={() => setView("new")} onGoToPending={() => setView("pending")} onGoToCalendar={() => setView("calendar")} onGoToInvoices={() => setView("invoices")} />
       }
     </>
   );
