@@ -1530,17 +1530,17 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
             </button>
           </div>
           {/* Nav tabs */}
-          <div className="flex gap-1 mb-5">
-            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
+          <div className="flex gap-1 mb-5 overflow-x-auto -mx-6 px-6 pb-1" style={{ scrollbarWidth: "none" }}>
+            <button className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0"
               style={{ background: "rgba(255,255,255,0.15)" }}>
               Proyectos
             </button>
             <button onClick={onGoToCalendar}
-              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">
               Calendario
             </button>
             <button onClick={onGoToPending}
-              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5 flex-shrink-0">
               Pendientes
               {pendingPayCount > 0 && (
                 <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
@@ -1550,7 +1550,7 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
               )}
             </button>
             <button onClick={onGoToInvoices}
-              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">
               Facturas
             </button>
           </div>
@@ -2458,14 +2458,14 @@ function CalendarView({ projects, onSelectProject, onGoToList, onGoToPending, on
               <p className="text-sm mt-0.5" style={{ color: "#94a3b8" }}>{projects.length} proyectos</p>
             </div>
           </div>
-          <div className="flex gap-1">
-            <button onClick={onGoToList} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Proyectos</button>
-            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white" style={{ background: "rgba(255,255,255,0.15)" }}>Calendario</button>
-            <button onClick={onGoToPending} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
+          <div className="flex gap-1 overflow-x-auto -mx-6 px-6 pb-1" style={{ scrollbarWidth: "none" }}>
+            <button onClick={onGoToList} className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">Proyectos</button>
+            <button className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0" style={{ background: "rgba(255,255,255,0.15)" }}>Calendario</button>
+            <button onClick={onGoToPending} className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5 flex-shrink-0">
               Pendientes
               {pendingPayCount > 0 && <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#dc2626", color: "#fff" }}>{pendingPayCount}</span>}
             </button>
-            <button onClick={onGoToInvoices} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Facturas</button>
+            <button onClick={onGoToInvoices} className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">Facturas</button>
           </div>
         </div>
       </div>
@@ -2593,18 +2593,18 @@ function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack, on
             </div>
           </div>
           {/* Nav tabs */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto -mx-6 px-6 pb-1" style={{ scrollbarWidth: "none" }}>
             <button onClick={onBack}
-              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">
               Proyectos
             </button>
             <button onClick={onGoToCalendar}
-              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">
               Calendario
             </button>
-            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
+            <button className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0"
               style={{ background: "rgba(255,255,255,0.15)" }}>
-              Pendientes de pago
+              Pendientes
               {pendingItems.length > 0 && (
                 <span className="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full align-middle"
                   style={{ background: "#dc2626", color: "#fff" }}>
@@ -2613,7 +2613,7 @@ function PendingPaymentsView({ projects, onSelectProject, onMarkPaid, onBack, on
               )}
             </button>
             <button onClick={onGoToInvoices}
-              className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">
               Facturas
             </button>
           </div>
@@ -2821,14 +2821,14 @@ function InvoicesView({ projects, onSelectProject, onBack, onGoToCalendar, onGoT
               <p className="text-sm mt-0.5" style={{ color: "#94a3b8" }}>{projects.length} proyectos</p>
             </div>
           </div>
-          <div className="flex gap-1 flex-wrap">
-            <button onClick={onBack} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Proyectos</button>
-            <button onClick={onGoToCalendar} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors">Calendario</button>
-            <button onClick={onGoToPending} className="text-sm font-medium px-4 py-2 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
+          <div className="flex gap-1 overflow-x-auto -mx-6 px-6 pb-1" style={{ scrollbarWidth: "none" }}>
+            <button onClick={onBack} className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">Proyectos</button>
+            <button onClick={onGoToCalendar} className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">Calendario</button>
+            <button onClick={onGoToPending} className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-1.5 flex-shrink-0">
               Pendientes
               {pendingPayCount > 0 && <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#dc2626", color: "#fff" }}>{pendingPayCount}</span>}
             </button>
-            <button className="text-sm font-semibold px-4 py-2 rounded-lg text-white" style={{ background: "rgba(255,255,255,0.15)" }}>
+            <button className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0" style={{ background: "rgba(255,255,255,0.15)" }}>
               Facturas
             </button>
           </div>
