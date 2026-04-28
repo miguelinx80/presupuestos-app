@@ -1768,10 +1768,30 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
     });
   };
 
-  const handleSave = () => {
-    const withOpts = { ...draft, options: computedOpts };
-    setProject(withOpts); onSave(withOpts); setEditing(false);
+  // Auto-save: debounce 3s after last change while editing
+  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
+  const autoSaveTimer = useRef(null);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (!editing) { isFirstRender.current = true; return; }
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    setSaveStatus("saving");
+    clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      const withOpts = { ...draft, options: computedOpts };
+      setProject(withOpts);
+      onSave(withOpts).then(() => setSaveStatus("saved"));
+    }, 3000);
+    return () => clearTimeout(autoSaveTimer.current);
+  }, [draft, editing]);
+
+  const exitEditing = () => {
+    clearTimeout(autoSaveTimer.current);
+    setEditing(false);
+    setSaveStatus(null);
   };
+
   const setD = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
   const updateRow = (id, field, val) => setDraft(d => ({ ...d, expenses: d.expenses.map(e => e.id === id ? { ...e, [field]: val } : e) }));
@@ -1826,16 +1846,16 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
                 </button>
               </div>
             ) : (
-              <div className="flex gap-2">
-                <button onClick={handleSave}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
-                  style={{ background: C.gold, color: C.navy }}>
-                  <Save size={13} /> Guardar
-                </button>
-                <button onClick={() => setEditing(false)}
+              <div className="flex items-center gap-3">
+                <div className="text-xs flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  {saveStatus === "saving" && <><span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: C.gold }} /> Guardando…</>}
+                  {saveStatus === "saved"  && <><Check size={12} color="#43a047" /> Guardado</>}
+                  {saveStatus === null     && <span style={{ color: "rgba(255,255,255,0.3)" }}>Autoguardado activo</span>}
+                </div>
+                <button onClick={exitEditing}
                   className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg"
                   style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                  <X size={13} /> Cancelar
+                  <X size={13} /> Salir
                 </button>
               </div>
             )}
