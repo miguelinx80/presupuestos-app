@@ -1481,16 +1481,34 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
   const [search, setSearch]             = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterYear, setFilterYear]     = useState("Todos");
+  const [filterClient, setFilterClient] = useState("Todos");
+  const [collapsedYears, setCollapsedYears] = useState({});
+  const toggleYear = (y) => setCollapsedYears(prev => ({ ...prev, [y]: !prev[y] }));
+  const [subTab, setSubTab] = useState("list"); // "list" | "clients"
 
-  const years = useMemo(() => [...new Set(projects.map(p => p.year))].sort(), [projects]);
+  const clientStats = useMemo(() => {
+    const map = {};
+    projects.forEach(p => {
+      if (!p.client) return;
+      if (!map[p.client]) map[p.client] = { client: p.client, count: 0, billed: 0, sqmTotal: 0, sqmCount: 0 };
+      map[p.client].count++;
+      if (p.chosenOption) map[p.client].billed += p.options[p.chosenOption]?.total || 0;
+      if (p.sqm) { map[p.client].sqmTotal += p.sqm; map[p.client].sqmCount++; }
+    });
+    return Object.values(map).sort((a, b) => b.billed - a.billed);
+  }, [projects]);
+
+  const years   = useMemo(() => [...new Set(projects.map(p => p.year))].sort(), [projects]);
+  const clients = useMemo(() => [...new Set(projects.map(p => p.client).filter(Boolean))].sort(), [projects]);
   const pendingPayCount = useMemo(() => projects.reduce((s, p) => s + (p.expenses || []).filter(e => e.payStatus === "alert").length, 0), [projects]);
 
   const filtered = useMemo(() => projects.filter(p => {
     const q = search.toLowerCase();
     return (!q || p.ref.toLowerCase().includes(q) || p.city.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q))
       && (filterStatus === "Todos" || p.status === filterStatus)
-      && (filterYear === "Todos" || p.year === Number(filterYear));
-  }), [projects, search, filterStatus, filterYear]);
+      && (filterYear === "Todos" || p.year === Number(filterYear))
+      && (filterClient === "Todos" || p.client === filterClient);
+  }), [projects, search, filterStatus, filterYear, filterClient]);
 
   const totalBilled    = projects.filter(p => p.status === "Facturado"  && p.chosenOption).reduce((s, p) => s + (p.options[p.chosenOption]?.total || 0), 0);
   const totalConfirmed = projects.filter(p => p.status === "Confirmado" && p.chosenOption).reduce((s, p) => s + (p.options[p.chosenOption]?.total || 0), 0);
@@ -1553,6 +1571,11 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
               className="text-xs font-medium px-3 py-1.5 rounded-lg text-white/60 hover:text-white transition-colors flex-shrink-0">
               Facturas
             </button>
+            <button onClick={() => setSubTab(t => t === "clients" ? "list" : "clients")}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${subTab === "clients" ? "text-white font-semibold" : "text-white/60 hover:text-white"}`}
+              style={subTab === "clients" ? { background: "rgba(255,255,255,0.15)" } : {}}>
+              Por cliente
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <StatCard label="Proyectos activos" value={projects.filter(p => p.status !== "Cancelado").length} icon={Building2} accent={C.gold} />
@@ -1592,7 +1615,7 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
         )}
 
         <div className="flex flex-wrap gap-2 items-center">
-          <div className="flex-1 min-w-48 flex items-center gap-2 rounded-xl px-3 py-2"
+          <div className="w-full sm:flex-1 sm:min-w-48 flex items-center gap-2 rounded-xl px-3 py-2"
             style={{ background: C.card, border: `1px solid ${C.border}` }}>
             <Search size={14} style={{ color: C.textLight }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
@@ -1611,9 +1634,61 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
             <option>Todos</option>
             {years.map(y => <option key={y}>{y}</option>)}
           </select>
+          <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
+            className="text-sm rounded-xl px-3 py-2 outline-none"
+            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textDark }}>
+            <option>Todos</option>
+            {clients.map(c => <option key={c}>{c}</option>)}
+          </select>
+          <button onClick={() => {
+            const rows = [["Ref","Cliente","Ciudad","País","m²","Fecha","Estado","Opción","Subtotal","Total"]];
+            filtered.forEach(p => {
+              const opt = p.chosenOption ? p.options[p.chosenOption] : null;
+              rows.push([p.ref, p.client, p.city, p.country, p.sqm||"", p.startDate||"", p.status, p.chosenOption||"", opt?.subtotal||"", opt?.total||""]);
+            });
+            const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+            const a = Object.assign(document.createElement("a"), { href: "data:text/csv;charset=utf-8,﻿" + encodeURIComponent(csv), download: "proyectos.csv" });
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          }}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl flex-shrink-0"
+            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textMid }}>
+            <Download size={13} /> CSV
+          </button>
         </div>
 
-        <div className="space-y-1">
+        {/* Client profitability view */}
+        {subTab === "clients" && (
+          <div className="space-y-2">
+            {clientStats.length === 0 && (
+              <div className="text-center py-12 text-sm" style={{ color: C.textLight }}>No hay datos de clientes.</div>
+            )}
+            {clientStats.map(cs => {
+              const avgSqm = cs.sqmCount > 0 ? Math.round(cs.sqmTotal / cs.sqmCount) : null;
+              return (
+                <div key={cs.client} className="rounded-2xl p-4 flex items-center gap-4"
+                  style={{ background: C.card, border: `1px solid ${C.border}` }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    style={{ background: C.navy + "18", color: C.navy }}>
+                    {cs.client.substring(0, 2)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold" style={{ color: C.textDark }}>{cs.client}</div>
+                    <div className="text-xs mt-0.5" style={{ color: C.textLight }}>
+                      {cs.count} proyecto{cs.count !== 1 ? "s" : ""}
+                      {avgSqm ? ` · ${avgSqm} m² prom.` : ""}
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-sm font-bold" style={{ color: C.textDark }}>{fmt(cs.billed)}</div>
+                    <div className="text-xs" style={{ color: C.textLight }}>facturado</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="space-y-1" style={{ display: subTab === "clients" ? "none" : undefined }}>
           {filtered.length === 0 && (
             <div className="text-center py-12 text-sm" style={{ color: C.textLight }}>No hay proyectos que coincidan.</div>
           )}
@@ -1625,15 +1700,21 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
               if (p.year !== lastYear) { yearGroups.push({ year: p.year, projects: [] }); lastYear = p.year; }
               yearGroups[yearGroups.length - 1].projects.push(p);
             });
-            return yearGroups.map(({ year, projects: grp }) => (
+            return yearGroups.map(({ year, projects: grp }) => {
+              const isCollapsed = filterYear === "Todos" && !!collapsedYears[year];
+              const yearTotal = grp.reduce((s, p) => s + (p.chosenOption ? (p.options[p.chosenOption]?.total || 0) : 0), 0);
+              return (
               <div key={year}>
                 {filterYear === "Todos" && (
-                  <div className="flex items-center gap-3 pt-3 pb-2 px-1">
+                  <button type="button" onClick={() => toggleYear(year)}
+                    className="flex items-center gap-3 pt-3 pb-2 px-1 w-full group">
                     <span className="text-xs font-bold tracking-widest uppercase" style={{ color: C.textLight }}>{year}</span>
+                    {yearTotal > 0 && <span className="text-xs font-semibold" style={{ color: C.textLight }}>{fmt(yearTotal)}</span>}
                     <div className="flex-1 h-px" style={{ background: C.border }} />
-                  </div>
+                    <span style={{ color: C.textLight }}>{isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}</span>
+                  </button>
                 )}
-                <div className="space-y-2">
+                {!isCollapsed && <div className="space-y-2">
                   {grp.map(p => {
                     const chosen   = p.chosenOption ? p.options[p.chosenOption] : null;
                     const expenses = chosen ? chosen.total : null;
@@ -1653,9 +1734,10 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                             <StatusBadge status={p.status} />
                             {p.notes && (
                               <span title={p.notes}
-                                className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full"
+                                className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full max-w-xs"
                                 style={{ background: "#f1f5f9", color: C.textLight, border: `1px solid ${C.border}` }}>
                                 <FileText size={9} />
+                                <span className="truncate" style={{ maxWidth: 120 }}>{p.notes}</span>
                               </span>
                             )}
                             {alertCount > 0 && (
@@ -1668,7 +1750,7 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
                             {p.startDate && (
                               <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                                <Calendar size={10} />{fmtDate(p.startDate)}{p.duration ? ` · ${p.duration}h` : ""}
+                                <Calendar size={10} />{fmtDate(p.startDate)}{p.duration ? ` · ${p.duration} días` : ""}
                               </span>
                             )}
                             <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
@@ -1713,9 +1795,10 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                       </button>
                     );
                   })}
-                </div>
+                </div>}
               </div>
-            ));
+            );
+            });
           })()}
         </div>
       </div>
@@ -1724,7 +1807,7 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
 }
 
 // ─── DETAIL VIEW ──────────────────────────────────────────────────────────────
-function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate }) {
+function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, onShowToast }) {
   const [project, setProject]           = useState(initial);
   const [editing, setEditing]           = useState(false);
   const [draft, setDraft]               = useState(initial);
@@ -1801,6 +1884,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
   const updateChosenOption = (opt) => {
     const updated = { ...project, chosenOption: opt };
     setProject(updated); setDraft(updated); onSave(updated);
+    onShowToast?.(opt ? `✓ Opción ${opt} elegida` : "✓ Opción eliminada");
   };
 
   const p = editing ? draft : project;
@@ -1874,8 +1958,18 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
         {/* Metadata */}
         <div className="rounded-xl p-5 grid grid-cols-2 sm:grid-cols-3 gap-4"
           style={{ background: C.card, border: `1px solid ${C.border}` }}>
+          {/* Cliente — select fijo */}
+          <div>
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}><User size={13} /> Cliente</div>
+            {editing
+              ? <select value={draft.client || ""} onChange={e => setD("client", e.target.value)} className={inputCl} style={inputSt}>
+                  <option value="">— Seleccionar —</option>
+                  {["CK","TH","Loewe","Otros"].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              : <div className="text-sm font-semibold" style={{ color: C.textDark }}>{project.client || <span style={{ color: C.textLight }}>—</span>}</div>}
+          </div>
+
           {[
-            ["Cliente",   "client",    <User size={13} />],
             ["País",      "country",   <MapPin size={13} />],
             ["Ciudad",    "city",      <MapPin size={13} />],
             ["Superficie","sqm",       <Ruler size={13} />, " m²"],
@@ -1941,6 +2035,19 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
               : <StatusBadge status={project.status} />}
           </div>
 
+          {/* Fecha de cobro */}
+          <div>
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>
+              <Euro size={13} /> Fecha cobro
+            </div>
+            {editing
+              ? <input type="date" value={draft.paidDate || ""} onChange={e => setD("paidDate", e.target.value)}
+                  className={inputCl} style={inputSt} />
+              : <div className="text-sm font-semibold" style={{ color: project.paidDate ? C.green : C.textLight }}>
+                  {project.paidDate ? fmtDate(project.paidDate) : "—"}
+                </div>}
+          </div>
+
           {/* Notes — full width */}
           <div className="col-span-2 sm:col-span-3">
             <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.textLight }}>
@@ -1964,62 +2071,6 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
           onChange={(locs) => setDraft(d => ({ ...d, locations: locs }))}
           city={p.city} country={p.country}
         />
-
-        {/* Timeline (solo modo lectura) */}
-        {!editing && <ProjectTimeline project={p} />}
-
-        {/* Documents */}
-        <DocumentsSection
-          documents={p.documents || []}
-          editing={editing}
-          onChange={(docs) => setDraft(d => ({ ...d, documents: docs }))}
-        />
-
-        {/* Checklist de equipo */}
-        <ChecklistSection
-          checklist={p.checklist || []}
-          editing={editing}
-          onChange={(cl) => setDraft(d => ({ ...d, checklist: cl }))}
-        />
-
-        {/* Options */}
-        <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-          <h3 className="text-sm font-semibold mb-3" style={{ color: C.textDark }}>Opciones de presupuesto</h3>
-          <div className="flex gap-2 flex-wrap mb-4">
-            {optKeys.map(opt => {
-              const oc = OPTION_COLORS[opt];
-              const isActive = activeOpt === opt;
-              const isChosen = project.chosenOption === opt;
-              return (
-                <button key={opt} onClick={() => setActiveOpt(opt)}
-                  className="flex-1 min-w-24 rounded-xl p-3 text-center transition-all"
-                  style={{ background: isActive ? oc.bg : "#f8fafc", border: `2px solid ${isActive ? oc.border : C.border}` }}>
-                  <div className="font-bold text-sm" style={{ color: isActive ? oc.text : C.textMid }}>Opción {opt}</div>
-                  <div className="font-bold text-lg mt-0.5" style={{ color: isActive ? oc.text : C.textDark }}>
-                    {fmt(computedOpts[opt]?.total)}</div>
-                  <div className="text-xs mt-0.5" style={{ color: C.textLight }}>Sub: {fmt(computedOpts[opt]?.subtotal)}</div>
-                  {isChosen && <div className="text-xs font-bold mt-1 rounded px-1 py-0.5 inline-block text-white"
-                    style={{ background: oc.badge }}>✓ Elegida</div>}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs" style={{ color: C.textMid }}>Opción elegida:</span>
-            <div className="flex gap-1.5">
-              {[null, ...optKeys].map(opt => (
-                <button key={opt || "none"} onClick={() => updateChosenOption(opt)}
-                  className="text-xs font-bold px-2.5 py-1 rounded-full transition-all"
-                  style={{ background: project.chosenOption === opt ? (opt ? OPTION_COLORS[opt].badge : "#64748b") : "#f1f5f9",
-                    color: project.chosenOption === opt ? "#fff" : C.textMid }}>
-                  {opt || "—"}
-                </button>
-              ))}
-            </div>
-            {cpm && <span className="text-xs ml-auto" style={{ color: C.textMid }}>
-              <TrendingUp size={11} className="inline mr-1" />{fmtD(cpm)}/m²</span>}
-          </div>
-        </div>
 
         {/* Expense table */}
         <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
@@ -2105,8 +2156,72 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
             </div>
           )}
 
+          {/* ── Mobile edit cards (hidden on sm+) ── */}
+          {showExpenses && editing && (
+            <div className="block sm:hidden space-y-2 mt-1">
+              {p.expenses.map((row, idx) => {
+                const rowBg = PAY_STYLE[row.payStatus]?.bg;
+                return (
+                  <div key={row.id} className="rounded-xl p-3 space-y-2"
+                    style={{ background: rowBg || "#f8fafc", border: `1px solid ${C.border}` }}>
+                    {/* Line 1: grip + dots + description + delete */}
+                    <div className="flex items-center gap-2">
+                      <GripVertical size={14} style={{ color: C.textLight, flexShrink: 0 }} />
+                      <PayDot status={row.payStatus} onChange={(f, v) => updateRow(row.id, f, v)} />
+                      <InvoiceDot status={row.invoiceStatus} onChange={(f, v) => updateRow(row.id, f, v)} />
+                      <input value={row.desc} onChange={e => updateRow(row.id, "desc", e.target.value)}
+                        placeholder="Descripción"
+                        className="flex-1 rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
+                      <button type="button" onClick={() => deleteRow(row.id)} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    {/* Line 2: url + provider + date */}
+                    <div className="grid grid-cols-2 gap-2 pl-1">
+                      <input value={row.provider} onChange={e => updateRow(row.id, "provider", e.target.value)}
+                        placeholder="Proveedor"
+                        className="rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
+                      <input type="date" value={row.date} onChange={e => updateRow(row.id, "date", e.target.value)}
+                        className="rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
+                      <input value={row.url} onChange={e => updateRow(row.id, "url", e.target.value)}
+                        placeholder="https://..."
+                        className="rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
+                      <input value={row.tarifa} onChange={e => updateRow(row.id, "tarifa", e.target.value)}
+                        placeholder="Tarifa"
+                        className="rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
+                    </div>
+                    {/* Line 3: option amounts */}
+                    <div className="flex gap-2 pl-1">
+                      {visibleExpOpts.map(o => (
+                        <div key={o} className="flex-1">
+                          <label className="text-xs font-bold block mb-1" style={{ color: OPTION_COLORS[o].text }}>Op. {o}</label>
+                          <input type="number"
+                            value={row[optKey(o)] ?? ""}
+                            onChange={e => updateRow(row.id, optKey(o), e.target.value === "" ? null : parseFloat(e.target.value))}
+                            placeholder="—"
+                            className="w-full rounded px-2 py-1 text-xs outline-none text-right"
+                            style={{ background: OPTION_COLORS[o].bg, border: `1px solid ${OPTION_COLORS[o].border}50`, color: C.textDark }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <button type="button" onClick={addRow}
+                className="w-full flex items-center justify-center gap-1 text-xs font-medium px-3 py-2 rounded-xl"
+                style={{ background: C.navy + "12", color: C.navy, border: `1px dashed ${C.border}` }}>
+                <Plus size={12} /> Añadir fila
+              </button>
+            </div>
+          )}
+
           {showExpenses && (
-            <div className={editing ? "overflow-x-auto" : "hidden sm:block overflow-x-auto"}>
+            <div className={editing ? "hidden sm:block overflow-x-auto" : "hidden sm:block overflow-x-auto"}>
               <table className="w-full text-sm" style={{ minWidth: editing ? 800 + visibleExpOpts.length * 80 : 680 }}>
                 <thead>
                   <tr>
@@ -2177,6 +2292,63 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
             </div>
           )}
         </div>
+
+        {/* Options */}
+        <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: C.textDark }}>Opciones de presupuesto</h3>
+          <div className="flex gap-2 flex-wrap mb-4">
+            {optKeys.map(opt => {
+              const oc = OPTION_COLORS[opt];
+              const isActive = activeOpt === opt;
+              const isChosen = project.chosenOption === opt;
+              return (
+                <button key={opt} onClick={() => setActiveOpt(opt)}
+                  className="flex-1 min-w-24 rounded-xl p-3 text-center transition-all"
+                  style={{ background: isActive ? oc.bg : "#f8fafc", border: `2px solid ${isActive ? oc.border : C.border}` }}>
+                  <div className="font-bold text-sm" style={{ color: isActive ? oc.text : C.textMid }}>Opción {opt}</div>
+                  <div className="font-bold text-lg mt-0.5" style={{ color: isActive ? oc.text : C.textDark }}>
+                    {fmt(computedOpts[opt]?.total)}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.textLight }}>Sub: {fmt(computedOpts[opt]?.subtotal)}</div>
+                  {isChosen && <div className="text-xs font-bold mt-1 rounded px-1 py-0.5 inline-block text-white"
+                    style={{ background: oc.badge }}>✓ Elegida</div>}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs" style={{ color: C.textMid }}>Opción elegida:</span>
+            <div className="flex gap-1.5">
+              {[null, ...optKeys].map(opt => (
+                <button key={opt || "none"} onClick={() => updateChosenOption(opt)}
+                  className="text-xs font-bold px-2.5 py-1 rounded-full transition-all"
+                  style={{ background: project.chosenOption === opt ? (opt ? OPTION_COLORS[opt].badge : "#64748b") : "#f1f5f9",
+                    color: project.chosenOption === opt ? "#fff" : C.textMid }}>
+                  {opt || "—"}
+                </button>
+              ))}
+            </div>
+            {cpm && <span className="text-xs ml-auto" style={{ color: C.textMid }}>
+              <TrendingUp size={11} className="inline mr-1" />{fmtD(cpm)}/m²</span>}
+          </div>
+        </div>
+
+        {/* Timeline (solo modo lectura) */}
+        {!editing && <ProjectTimeline project={p} />}
+
+        {/* Documents */}
+        <DocumentsSection
+          documents={p.documents || []}
+          editing={editing}
+          onChange={(docs) => setDraft(d => ({ ...d, documents: docs }))}
+        />
+
+        {/* Checklist de equipo */}
+        <ChecklistSection
+          checklist={p.checklist || []}
+          editing={editing}
+          onChange={(cl) => setDraft(d => ({ ...d, checklist: cl }))}
+        />
+
       </div>
       {showQuote && <QuoteModal project={project} onClose={() => setShowQuote(false)} />}
     </div>
@@ -2236,15 +2408,22 @@ function NewProjectView({ onBack, onCreate }) {
               <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Nombre del proyecto *</label>
               <input required value={form.ref} onChange={e => setF("ref", e.target.value)} placeholder="CKO Roppenheim" style={inputSt} className={inputCl} />
             </div>
-            {[["Marca","brand","CKO, TH..."],["Cliente","client","Tommy Hilfiger..."],
+            {[["Marca","brand","CKO, TH..."],
               ["Ciudad","city","París"],["País","country","Francia"],
-              ["Superficie (m²)","sqm","350"],["Duración (h)","duration","8"],
+              ["Superficie (m²)","sqm","350"],["Duración (días)","duration","8"],
               ["Fee fotografía (€)","photoFee","1200"]].map(([label, key, ph]) => (
               <div key={key}>
                 <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>{label}</label>
                 <input value={form[key] || ""} onChange={e => setF(key, e.target.value)} placeholder={ph} style={inputSt} className={inputCl} />
               </div>
             ))}
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Cliente</label>
+              <select value={form.client || ""} onChange={e => setF("client", e.target.value)} style={inputSt} className={inputCl}>
+                <option value="">— Seleccionar —</option>
+                {["CK","TH","Loewe","Otros"].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
             <div>
               <label className="text-xs font-medium block mb-1" style={{ color: C.textMid }}>Año</label>
               <input value={form.year || ""} onChange={e => setF("year", e.target.value)} style={inputSt} className={inputCl} />
@@ -3078,7 +3257,7 @@ export default function App() {
         </div>
       )}
       {view === "detail" && selected
-        ? <DetailView project={selected} onBack={() => setView("list")} onSave={handleSave} onDelete={handleDelete} onDuplicate={handleDuplicate} />
+        ? <DetailView project={selected} onBack={() => setView("list")} onSave={handleSave} onDelete={handleDelete} onDuplicate={handleDuplicate} onShowToast={showToast} />
         : view === "new"
         ? <NewProjectView onBack={() => setView("list")} onCreate={handleCreate} />
         : view === "pending"
