@@ -1666,6 +1666,11 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                             )}
                           </div>
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
+                            {p.startDate && (
+                              <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                                <Calendar size={10} />{fmtDate(p.startDate)}{p.duration ? ` · ${p.duration}h` : ""}
+                              </span>
+                            )}
                             <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
                               <MapPin size={10} />{p.city}, {p.country}
                             </span>
@@ -1677,11 +1682,6 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                                 <Ruler size={10} />{p.sqm} m²
                               </span>
                             )}
-                            {p.startDate && (
-                              <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                                <Calendar size={10} />{fmtDate(p.startDate)}{p.duration ? ` · ${p.duration}h` : ""}
-                              </span>
-                            )}
                             {p.locations?.length > 0 && (
                               <span className="text-xs flex items-center gap-1" style={{ color: "#2563eb" }}>
                                 <Navigation size={10} />{p.locations.length} ubicación{p.locations.length > 1 ? "es" : ""}
@@ -1690,15 +1690,15 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                           </div>
                           {(fee || expenses) && (
                             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                              {expenses && (
+                                <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
+                                  ✈️ {fmt(expenses)}
+                                </span>
+                              )}
                               {fee && (
                                 <span className="text-xs font-semibold flex items-center gap-1" style={{ color: C.navy }}>
                                   📷 {fmt(fee)}
                                   {feePerSqm && <span className="font-normal" style={{ color: C.textLight }}>· {fmtD(feePerSqm)}/m²</span>}
-                                </span>
-                              )}
-                              {expenses && (
-                                <span className="text-xs flex items-center gap-1" style={{ color: C.textMid }}>
-                                  ✈️ {fmt(expenses)}
                                 </span>
                               )}
                             </div>
