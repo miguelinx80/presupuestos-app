@@ -1811,9 +1811,12 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
     <div className="min-h-screen" style={{ background: C.bg }}>
       <div style={{ background: `linear-gradient(135deg, ${C.navyDark} 0%, ${C.navyLight} 100%)` }} className="px-6 py-3 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white flex-shrink-0">
-            <ArrowLeft size={16} /> Volver
-          </button>
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white flex-shrink-0">
+              <ArrowLeft size={16} /> Volver
+            </button>
+            <span className="text-sm font-semibold text-white truncate">{project.ref}</span>
+          </div>
           {!editing ? (
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
               <button onClick={() => setShowQuote(true)}
