@@ -1636,7 +1636,7 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
                 <div className="space-y-2">
                   {grp.map(p => {
                     const chosen   = p.chosenOption ? p.options[p.chosenOption] : null;
-                    const expenses = chosen ? chosen.subtotal : null;
+                    const expenses = chosen ? chosen.total : null;
                     const fee      = p.photoFee ? Number(p.photoFee) : null;
                     const total    = chosen ? chosen.total : null;
                     const feePerSqm = fee && p.sqm ? fee / p.sqm : null;
@@ -1809,7 +1809,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
 
   return (
     <div className="min-h-screen" style={{ background: C.bg }}>
-      <div style={{ background: `linear-gradient(135deg, ${C.navyDark} 0%, ${C.navyLight} 100%)` }} className="px-6 pt-6 pb-8">
+      <div style={{ background: `linear-gradient(135deg, ${C.navyDark} 0%, ${C.navyLight} 100%)` }} className="px-6 pt-6 pb-8 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto">
           <div className="mb-4">
             <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white mb-3">
