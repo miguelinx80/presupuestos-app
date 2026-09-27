@@ -1815,7 +1815,12 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
             <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white flex-shrink-0">
               <ArrowLeft size={16} /> Volver
             </button>
-            <span className="text-sm font-semibold text-white truncate">{project.ref}</span>
+            {editing
+              ? <input value={draft.ref} onChange={e => setD("ref", e.target.value)}
+                  className="text-sm font-semibold text-white bg-transparent border-b border-white/30 outline-none truncate"
+                  style={{ minWidth: 0 }} />
+              : <span className="text-sm font-semibold text-white truncate">{project.ref}</span>
+            }
           </div>
           {!editing ? (
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
@@ -1861,26 +1866,6 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate })
               </button>
             </div>
           )}
-        </div>
-      </div>
-      <div style={{ background: `linear-gradient(135deg, ${C.navyDark} 0%, ${C.navyLight} 100%)` }} className="px-6 pt-5 pb-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0"
-              style={{ background: C.gold, color: C.navy }}>{project.brand}</div>
-            <div className="flex-1">
-              {editing
-                ? <input value={draft.ref} onChange={e => setD("ref", e.target.value)}
-                    className="text-xl font-bold text-white bg-transparent border-b border-white/30 outline-none w-full mb-1" />
-                : <h2 className="text-xl font-bold text-white">{project.ref}</h2>}
-              <div className="flex items-center gap-3 flex-wrap mt-1">
-                <span className="text-sm text-white/70 flex items-center gap-1">
-                  <MapPin size={12} />{project.city}, {project.country}
-                </span>
-                <StatusBadge status={project.status} />
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
