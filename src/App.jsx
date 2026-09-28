@@ -2121,28 +2121,56 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
             <div className="block sm:hidden space-y-2 mt-1">
               {p.expenses.map(row => {
                 const Icon = getCatIcon(row.desc);
-                const amount = row[optKey(activeOpt)];
                 const rowBg = PAY_STYLE[row.payStatus]?.bg;
+                const rowOpts = usedExpOpts(project.expenses).length ? usedExpOpts(project.expenses) : optKeys;
                 return (
-                  <div key={row.id} className="rounded-xl px-4 py-3 flex items-start gap-3"
+                  <div key={row.id} className="rounded-xl p-3 space-y-2"
                     style={{ background: rowBg || "#f8fafc", border: `1px solid ${C.border}` }}>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-shrink-0">
+                    {/* Fila 1: dots + icono + descripción */}
+                    <div className="flex items-center gap-2">
                       <PayDot status={row.payStatus} onChange={(f, v) => { const u = { ...p, expenses: p.expenses.map(e => e.id === row.id ? { ...e, [f]: v } : e) }; setProject(u); onSave(u); }} />
                       <InvoiceDot status={row.invoiceStatus} onChange={(f, v) => { const u = { ...p, expenses: p.expenses.map(e => e.id === row.id ? { ...e, [f]: v } : e) }; setProject(u); onSave(u); }} />
+                      <Icon size={13} style={{ color: C.textLight, flexShrink: 0 }} />
+                      <span className="text-sm font-semibold flex-1 min-w-0" style={{ color: C.textDark }}>{row.desc || <span style={{ color: C.textLight }}>—</span>}</span>
                     </div>
-                    <Icon size={14} style={{ color: C.textLight, flexShrink: 0, marginTop: 2 }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate" style={{ color: C.textDark }}>{row.desc}</div>
-                      <div className="text-xs mt-0.5 flex flex-wrap gap-x-2" style={{ color: C.textMid }}>
-                        {row.provider && <span>{row.provider}</span>}
-                        {row.date && <span>{fmtDate(row.date)}</span>}
-                        {row.url && <a href={row.url} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}><ExternalLink size={10} className="inline" /> enlace</a>}
+                    {/* Fila 2: proveedor + fecha + tarifa */}
+                    {(row.provider || row.date || row.tarifa) && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs pl-1" style={{ color: C.textMid }}>
+                        {row.provider && <span>✈️ {row.provider}</span>}
+                        {row.date && <span>📅 {fmtDate(row.date)}</span>}
+                        {row.tarifa && <span>🏷 {row.tarifa}</span>}
                       </div>
-                    </div>
-                    {amount != null && (
-                      <span className="text-sm font-bold flex-shrink-0" style={{ color: activeOpt === p.chosenOption ? C.green : C.textDark }}>
-                        {fmt(amount)}
-                      </span>
+                    )}
+                    {/* Fila 3: enlace */}
+                    {row.url && (
+                      <div className="pl-1">
+                        <a href={row.url} target="_blank" rel="noopener noreferrer"
+                          className="text-xs flex items-center gap-1" style={{ color: "#2563eb" }}>
+                          <ExternalLink size={10} /> {row.url.replace(/^https?:\/\//, "").substring(0, 40)}{row.url.length > 46 ? "…" : ""}
+                        </a>
+                      </div>
+                    )}
+                    {/* Fila 4: importes por opción */}
+                    {rowOpts.some(o => row[optKey(o)] != null) && (
+                      <div className="flex gap-2 pl-1 flex-wrap">
+                        {rowOpts.map(o => {
+                          const v = row[optKey(o)];
+                          if (v == null) return null;
+                          const isActive = o === activeOpt;
+                          const isChosen = o === p.chosenOption;
+                          return (
+                            <span key={o} className="text-xs font-bold px-2 py-0.5 rounded-full"
+                              style={{
+                                background: isActive ? OPTION_COLORS[o].bg : OPTION_COLORS[o].bg + "80",
+                                color: isChosen ? C.green : OPTION_COLORS[o].text,
+                                border: `1px solid ${OPTION_COLORS[o].border}${isActive ? "" : "60"}`,
+                                fontWeight: isActive ? 700 : 500,
+                              }}>
+                              Op.{o} {fmt(v)}
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 );
