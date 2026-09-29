@@ -526,7 +526,7 @@ function LocationsSection({ locations = [], editing, onChange, city = "", countr
   const inputSt = { background: "#f8fafc", border: `1px solid ${C.border}`, color: C.textDark };
 
   return (
-    <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+    <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: C.textDark }}>
           <Navigation size={15} style={{ color: C.navy }} /> Ubicaciones
@@ -883,7 +883,7 @@ function DocumentsSection({ documents = [], editing, onChange }) {
   const ist = { background: "#f8fafc", border: `1px solid ${C.border}`, color: C.textDark };
 
   return (
-    <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+    <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: C.textDark }}>
           📁 Documentos Drive
@@ -983,7 +983,7 @@ function ChecklistSection({ checklist = [], editing, onChange }) {
   const checked = checklist.filter(c => c.checked).length;
 
   return (
-    <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+    <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: C.textDark }}>
           <ClipboardCheck size={15} style={{ color: C.navy }} /> Checklist de equipo
@@ -1103,7 +1103,7 @@ function ProjectTimeline({ project }) {
   });
 
   return (
-    <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+    <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <h3 className="text-sm font-semibold flex items-center gap-2 mb-4" style={{ color: C.textDark }}>
         <Calendar size={15} style={{ color: C.navy }} /> Timeline del proyecto
       </h3>
@@ -1589,7 +1589,7 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {chartData.length > 0 && (
-          <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+          <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: C.textDark }}>Volumen por año</h2>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} barSize={28}>
@@ -1956,7 +1956,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
       <div className="max-w-6xl mx-auto px-2 sm:px-4 py-6 space-y-5">
 
         {/* Metadata */}
-        <div className="rounded-xl p-5 grid grid-cols-2 sm:grid-cols-3 gap-4"
+        <div className="rounded-xl p-3 sm:p-5 grid grid-cols-2 sm:grid-cols-3 gap-4"
           style={{ background: C.card, border: `1px solid ${C.border}` }}>
           {/* Cliente — select fijo */}
           <div>
@@ -2073,7 +2073,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
         />
 
         {/* Expense table */}
-        <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+        <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between mb-3">
             <button type="button" className="flex items-center gap-2 text-sm font-semibold"
               style={{ color: C.textDark }} onClick={() => setShowExpenses(v => !v)}>
@@ -2323,7 +2323,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
         </div>
 
         {/* Options */}
-        <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+        <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <h3 className="text-sm font-semibold mb-3" style={{ color: C.textDark }}>Opciones de presupuesto</h3>
           <div className="flex gap-2 flex-wrap mb-4">
             {optKeys.map(opt => {
@@ -2430,7 +2430,7 @@ function NewProjectView({ onBack, onCreate }) {
 
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-4 py-6 space-y-5">
         {/* Info general */}
-        <div className="rounded-xl p-5 space-y-4" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+        <div className="rounded-xl p-3 sm:p-5 space-y-4" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <h3 className="text-sm font-semibold" style={{ color: C.textDark }}>Información general</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
@@ -2500,7 +2500,7 @@ function NewProjectView({ onBack, onCreate }) {
         />
 
         {/* Options */}
-        <div className="rounded-xl p-5 space-y-3" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+        <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold" style={{ color: C.textDark }}>Opciones de presupuesto</h3>
             {optCount < 4 && (
@@ -2540,7 +2540,7 @@ function NewProjectView({ onBack, onCreate }) {
         </div>
 
         {/* Expenses */}
-        <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+        <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold" style={{ color: C.textDark }}>Gastos de viaje y producción</h3>
             <div className="flex items-center gap-2">
