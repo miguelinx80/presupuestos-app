@@ -1485,6 +1485,8 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
   const [collapsedYears, setCollapsedYears] = useState({});
   const toggleYear = (y) => setCollapsedYears(prev => ({ ...prev, [y]: !prev[y] }));
   const [subTab, setSubTab] = useState("list"); // "list" | "clients"
+  const [showStats, setShowStats] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   const clientStats = useMemo(() => {
     const map = {};
@@ -1577,40 +1579,60 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
               Por cliente
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <StatCard label="Proyectos activos" value={projects.filter(p => p.status !== "Cancelado").length} icon={Building2} accent={C.gold} />
-            <StatCard label="Facturado" value={fmt(totalBilled)} sub="proyectos cerrados" icon={Euro} accent={C.greenLight} />
-            <StatCard label="Confirmado" value={fmt(totalConfirmed)} sub="en ejecución" icon={CheckCircle2} accent="#3b82f6" />
-            <StatCard label="Pendiente" value={projects.filter(p => p.status === "Pendiente").length} sub="por confirmar" icon={Clock} accent="#f59e0b" />
-            <StatCard label="Facturas pendientes" value={fmt(missingInvoiceAmount)} sub="gastos sin justificar" icon={AlertTriangle} accent="#f59e0b" />
-          </div>
+          <button type="button" onClick={() => setShowStats(s => !s)}
+            className="flex items-center gap-2 text-xs font-medium mb-2 opacity-60 hover:opacity-100 transition-opacity"
+            style={{ color: "#fff" }}>
+            {showStats ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            {showStats ? "Ocultar resumen" : "Ver resumen"}
+          </button>
+          {showStats && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-1">
+              <StatCard label="Proyectos activos" value={projects.filter(p => p.status !== "Cancelado").length} icon={Building2} accent={C.gold} />
+              <StatCard label="Facturado" value={fmt(totalBilled)} sub="proyectos cerrados" icon={Euro} accent={C.greenLight} />
+              <StatCard label="Confirmado" value={fmt(totalConfirmed)} sub="en ejecución" icon={CheckCircle2} accent="#3b82f6" />
+              <StatCard label="Pendiente" value={projects.filter(p => p.status === "Pendiente").length} sub="por confirmar" icon={Clock} accent="#f59e0b" />
+              <StatCard label="Facturas pendientes" value={fmt(missingInvoiceAmount)} sub="gastos sin justificar" icon={AlertTriangle} accent="#f59e0b" />
+            </div>
+          )}
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {chartData.length > 0 && (
           <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-            <h2 className="text-sm font-semibold mb-4" style={{ color: C.textDark }}>Volumen por año</h2>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartData} barSize={28}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="year" tick={{ fontSize: 12, fill: C.textMid }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: C.textLight }} axisLine={false} tickLine={false}
-                  tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v, n) => [fmt(v), n]}
-                  contentStyle={{ borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 12 }} />
-                <Bar dataKey="Facturado"  stackId="a" fill={C.greenLight} />
-                <Bar dataKey="Confirmado" stackId="a" fill="#3b82f6" />
-                <Bar dataKey="Pendiente"  stackId="a" fill={C.gold} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="flex gap-4 mt-2 justify-center">
-              {[["Facturado", C.greenLight], ["Confirmado", "#3b82f6"], ["Pendiente", C.gold]].map(([l, c]) => (
-                <span key={l} className="flex items-center gap-1.5 text-xs" style={{ color: C.textMid }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: c }} />{l}
-                </span>
-              ))}
-            </div>
+            <button type="button" onClick={() => setShowChart(s => !s)}
+              className="flex items-center justify-between w-full group">
+              <h2 className="text-sm font-semibold" style={{ color: C.textDark }}>Volumen por año</h2>
+              <span style={{ color: C.textLight }} className="group-hover:opacity-70 transition-opacity">
+                {showChart ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </span>
+            </button>
+            {showChart && (
+              <>
+                <div className="mt-4">
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={chartData} barSize={28}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="year" tick={{ fontSize: 12, fill: C.textMid }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: C.textLight }} axisLine={false} tickLine={false}
+                        tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip formatter={(v, n) => [fmt(v), n]}
+                        contentStyle={{ borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 12 }} />
+                      <Bar dataKey="Facturado"  stackId="a" fill={C.greenLight} />
+                      <Bar dataKey="Confirmado" stackId="a" fill="#3b82f6" />
+                      <Bar dataKey="Pendiente"  stackId="a" fill={C.gold} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="flex gap-4 mt-2 justify-center">
+                    {[["Facturado", C.greenLight], ["Confirmado", "#3b82f6"], ["Pendiente", C.gold]].map(([l, c]) => (
+                      <span key={l} className="flex items-center gap-1.5 text-xs" style={{ color: C.textMid }}>
+                        <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: c }} />{l}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
