@@ -1597,7 +1597,7 @@ function ResumeView({ projects, onSelect, onNewProject, onGoToPending, onGoToCal
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-6 space-y-5">
         {chartData.length > 0 && (
           <div className="rounded-xl p-3 sm:p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
             <button type="button" onClick={() => setShowChart(s => !s)}
