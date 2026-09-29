@@ -1953,7 +1953,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-6 space-y-5">
 
         {/* Metadata */}
         <div className="rounded-xl p-5 grid grid-cols-2 sm:grid-cols-3 gap-4"
@@ -2138,6 +2138,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs pl-1" style={{ color: C.textMid }}>
                         {row.provider && <span>✈️ {row.provider}</span>}
                         {row.date && <span>📅 {fmtDate(row.date)}</span>}
+                        {row.time && <span>⏰ {row.time}</span>}
                         {row.tarifa && <span>🏷 {row.tarifa}</span>}
                       </div>
                     )}
