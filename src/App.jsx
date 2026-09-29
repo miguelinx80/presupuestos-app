@@ -2228,7 +2228,7 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
                         <X size={14} />
                       </button>
                     </div>
-                    {/* Line 2: url + provider + date */}
+                    {/* Line 2: provider + date + time + url + tarifa */}
                     <div className="grid grid-cols-2 gap-2 pl-1">
                       <input value={row.provider} onChange={e => updateRow(row.id, "provider", e.target.value)}
                         placeholder="Proveedor"
@@ -2237,13 +2237,17 @@ function DetailView({ project: initial, onBack, onSave, onDelete, onDuplicate, o
                       <input type="date" value={row.date} onChange={e => updateRow(row.id, "date", e.target.value)}
                         className="rounded px-2 py-1 text-xs outline-none"
                         style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
-                      <input value={row.url} onChange={e => updateRow(row.id, "url", e.target.value)}
-                        placeholder="https://..."
-                        className="rounded px-2 py-1 text-xs outline-none"
-                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
                       <input value={row.tarifa} onChange={e => updateRow(row.id, "tarifa", e.target.value)}
                         placeholder="Tarifa"
                         className="rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
+                      <input value={row.time} onChange={e => updateRow(row.id, "time", e.target.value)}
+                        placeholder="6:50 – 13:30"
+                        className="rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
+                      <input value={row.url} onChange={e => updateRow(row.id, "url", e.target.value)}
+                        placeholder="https://..."
+                        className="col-span-2 rounded px-2 py-1 text-xs outline-none"
                         style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.textDark }} />
                     </div>
                     {/* Line 3: option amounts */}
